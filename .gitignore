@@ -1,0 +1,16 @@
+# Dependencies
+**/node_modules/
+
+# Builds / generated
+**/dist/
+**/out/
+**/.next/
+
+# Env (keep examples)
+.env
+.env.*
+!**/.env.example
+
+# Logs / misc
+*.log
+**/.DS_Store

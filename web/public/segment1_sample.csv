@@ -1,0 +1,4 @@
+player_id,player_name,statement,is_lie
+1,"Karan","I was a national level swimmer",FALSE
+2,"Priya","I have never eaten a burger",TRUE
+3,"Rohit","I can speak 4 languages",FALSE

@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "lie-hard",
+    "prod": "lie-hard",
+    "staging": "lie-hard-staging"
+  }
+}

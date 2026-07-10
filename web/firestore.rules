@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Game state now lives on the authoritative WebSocket server (lie-hard-server),
+    // not in Firestore. Deny all direct client access.
+    match /gameState/{document} {
+      allow read, write: if false;
+    }
+
+    // Voter registrations are written/cleared only by the server (Firebase Admin
+    // SDK, which bypasses these rules). Each signed-in user may read ONLY their
+    // own record; no public read/write/delete.
+    match /voters/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write, delete: if false;
+    }
+
+  }
+}
