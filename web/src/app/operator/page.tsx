@@ -1505,24 +1505,9 @@ export default function OperatorPage() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  if (!gameState) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#09090b' }}>
-        <div className="text-center">
-          <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-3"
-            style={{ borderColor: '#f59e0b', borderTopColor: 'transparent' }} />
-          <p className="font-mono text-xs uppercase tracking-widest" style={{ color: '#52525b' }}>Connecting to Firestore…</p>
-        </div>
-      </div>
-    );
-  }
-
-  const rawPhase = gameState.phase as string;
-  const isValidPhase = (PHASE_ORDER as string[]).includes(rawPhase);
-  const currentPhase: GameState['phase'] = isValidPhase ? rawPhase as GameState['phase'] : 'SETUP';
-  const currentPhaseIdx = PHASE_ORDER.indexOf(currentPhase);
-  const audienceUrl = `${origin}/audience`;
-
+  // Auth gate FIRST: the operator socket only connects after login
+  // (useGameState enabled: isAuthenticated), so gameState stays null until then.
+  // Checking !gameState before this would deadlock on the loading spinner.
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: '#09090b' }}>
@@ -1578,6 +1563,25 @@ export default function OperatorPage() {
       </div>
     );
   }
+
+  // Authenticated but the socket hasn't delivered state yet.
+  if (!gameState) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#09090b' }}>
+        <div className="text-center">
+          <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-3"
+            style={{ borderColor: '#f59e0b', borderTopColor: 'transparent' }} />
+          <p className="font-mono text-xs uppercase tracking-widest" style={{ color: '#52525b' }}>Connecting to server…</p>
+        </div>
+      </div>
+    );
+  }
+
+  const rawPhase = gameState.phase as string;
+  const isValidPhase = (PHASE_ORDER as string[]).includes(rawPhase);
+  const currentPhase: GameState['phase'] = isValidPhase ? rawPhase as GameState['phase'] : 'SETUP';
+  const currentPhaseIdx = PHASE_ORDER.indexOf(currentPhase);
+  const audienceUrl = `${origin}/audience`;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#09090b', color: '#fafafa' }}>
