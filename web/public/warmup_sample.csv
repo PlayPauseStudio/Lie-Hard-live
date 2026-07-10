@@ -1,5 +1,6 @@
-statement,is_lie
-"I once ate 12 momos in one sitting",FALSE
-"I have never been to Goa",TRUE
-"Honey never expires",FALSE
-"A day on Venus is longer than a year on Venus",FALSE
+# answer = the on-screen answer for this statement: write TRUTH if it is true, LIE if it is the lie. Shows exactly this, never flipped. (This # line is ignored by the upload.)
+statement,answer
+"I once ate 12 momos in one sitting",TRUTH
+"I have never been to Goa",LIE
+"Honey never expires",TRUTH
+"A day on Venus is longer than a year on Venus",TRUTH

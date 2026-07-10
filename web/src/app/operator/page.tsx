@@ -292,15 +292,25 @@ export default function OperatorPage() {
 
   // ── CSV parsers ────────────────────────────────────────────────────────────
 
+  // The CSV `answer` column holds the on-screen answer for the statement:
+  // "TRUTH" or "LIE" (case-insensitive) — shown exactly as typed, never flipped.
+  // Falls back to the legacy `is_lie` column (TRUE = lie) so old CSVs still load.
+  function rowIsLie(row: Record<string, string>): boolean {
+    const answer = (row.answer ?? '').trim().toUpperCase();
+    if (answer === 'LIE') return true;
+    if (answer === 'TRUTH') return false;
+    return (row.is_lie ?? '').trim().toUpperCase() === 'TRUE';
+  }
+
   function parseWarmupCsv(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     Papa.parse(file, {
-      header: true, skipEmptyLines: true,
+      header: true, skipEmptyLines: true, comments: '#',
       complete: (results) => {
         setWarmupData((results.data as Record<string, string>[]).map((row) => ({
           statement: row.statement,
-          isLie: row.is_lie?.toUpperCase() === 'TRUE',
+          isLie: rowIsLie(row),
         })));
       },
       error: (err) => alert(`CSV error: ${err.message}`),
@@ -311,13 +321,13 @@ export default function OperatorPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     Papa.parse(file, {
-      header: true, skipEmptyLines: true,
+      header: true, skipEmptyLines: true, comments: '#',
       complete: (results) => {
         setSeg1Data((results.data as Record<string, string>[]).map((row) => ({
           playerId: parseInt(row.player_id, 10),
           playerName: row.player_name,
           statement: row.statement,
-          isLie: row.is_lie?.toUpperCase() === 'TRUE',
+          isLie: rowIsLie(row),
         })));
       },
       error: (err) => alert(`CSV error: ${err.message}`),
@@ -328,17 +338,18 @@ export default function OperatorPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     Papa.parse(file, {
-      header: true, skipEmptyLines: true,
+      header: true, skipEmptyLines: true, comments: '#',
       complete: (results) => {
         const rows = results.data as Record<string, string>[];
-        // Group rows by player_id; each row has: player_id, player_name, statement, is_lie
+        // Group rows by player_id; each row has: player_id, player_name, statement, answer.
+        // The row whose answer is LIE marks that player's lie.
         const byPlayer: Record<number, { playerName: string; statements: string[]; lieIndex: number }> = {};
         rows.forEach((row) => {
           const id = parseInt(row.player_id, 10);
           if (!byPlayer[id]) byPlayer[id] = { playerName: row.player_name, statements: [], lieIndex: 0 };
           const idx = byPlayer[id].statements.length;
           byPlayer[id].statements.push(row.statement);
-          if (row.is_lie?.trim().toUpperCase() === 'TRUE') byPlayer[id].lieIndex = idx;
+          if (rowIsLie(row)) byPlayer[id].lieIndex = idx;
         });
         setSeg2Data(
           Object.entries(byPlayer).map(([id, data]) => ({
