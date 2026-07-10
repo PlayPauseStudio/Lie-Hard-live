@@ -1,20 +1,16 @@
 {
-  "name": "lie-hard",
+  "name": "lie-hard-web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:staging": "npx env-cmd -f .env.staging next dev",
     "build": "next build",
-    "build:staging": "npx env-cmd -f .env.staging next build",
     "build:production": "npx env-cmd -f .env.production next build",
     "start": "next start",
     "lint": "next lint",
-    "clean": "rm -rf .next out",
+    "clean": "node scripts/clean.mjs",
     "deploy:prod": "npm run clean && firebase use prod && npm run build:production && firebase deploy",
-    "deploy:staging": "npm run clean && firebase use staging && npm run build:staging && firebase deploy",
-    "deploy:rules:prod": "firebase use prod && firebase deploy --only firestore:rules",
-    "deploy:rules:staging": "firebase use staging && firebase deploy --only firestore:rules"
+    "deploy:rules:prod": "firebase use prod && firebase deploy --only firestore:rules"
   },
   "dependencies": {
     "@types/papaparse": "^5.3.16",
