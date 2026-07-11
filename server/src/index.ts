@@ -4,6 +4,7 @@ import { logger } from './util/logger';
 import { initFirebaseAdmin } from './auth/firebaseAdmin';
 import { RoomStore } from './game/store';
 import { SnapshotStore } from './persistence/snapshot';
+import { GameMirror } from './persistence/gameMirror';
 import { votersBackend } from './persistence/voters';
 import { buildApp } from './app';
 import { createIo } from './socket';
@@ -18,9 +19,13 @@ async function main(): Promise<void> {
   const restored = await snapshots.load();
   if (restored) store.restore(restored);
 
+  // Mirror authoritative state to Firestore `gameState/live` so the no-server
+  // backup app can resume the exact scores/rounds on a mid-show switch.
+  const mirror = new GameMirror();
+
   const app = buildApp(() => store.version);
   const httpServer = createServer(app);
-  const { broadcaster } = createIo(httpServer, store);
+  const { broadcaster } = createIo(httpServer, store, mirror);
 
   // Periodic snapshot of authoritative state.
   const snapTimer = setInterval(() => void snapshots.save(store.snapshot()), env.SNAPSHOT_INTERVAL_MS);
@@ -33,6 +38,7 @@ async function main(): Promise<void> {
         env: env.NODE_ENV,
         voters: votersBackend(),
         snapshots: snapshots.enabled ? 'redis' : 'disabled',
+        gameMirror: mirror.enabled ? 'firestore' : 'disabled',
         origins: env.ALLOWED_ORIGINS,
       },
       'lie-hard-server listening',
@@ -48,6 +54,7 @@ async function main(): Promise<void> {
     clearInterval(snapTimer);
     broadcaster.stop();
     await snapshots.save(store.snapshot());
+    await mirror.flush();
     await snapshots.close();
     httpServer.close(() => process.exit(0));
     // Force-exit if connections linger.

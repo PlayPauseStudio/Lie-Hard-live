@@ -2,18 +2,22 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Game state now lives on the authoritative WebSocket server (lie-hard-server),
-    // not in Firestore. Deny all direct client access.
+    // SHARED PROJECT (server + no-server backup use this one project).
+    //
+    // The server mirrors its authoritative game state to gameState/live via the
+    // Admin SDK (which bypasses these rules). The no-server BACKUP app reads and
+    // writes gameState/live directly, so it must be open. This is a deliberate,
+    // temporary trade for instant switch-over with full carryover — re-lock to
+    // `if false` once the backup is retired and only the server version remains.
     match /gameState/{document} {
-      allow read, write: if false;
+      allow read, write: if true;
     }
 
-    // Voter registrations are written/cleared only by the server (Firebase Admin
-    // SDK, which bypasses these rules). Each signed-in user may read ONLY their
-    // own record; no public read/write/delete.
+    // Voter registrations: each signed-in user can read/write ONLY their own doc.
+    // (Server writes via Admin SDK; backup audience writes its own doc directly.)
+    // No public read/delete — keeps attendee name + phone private.
     match /voters/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow write, delete: if false;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
   }

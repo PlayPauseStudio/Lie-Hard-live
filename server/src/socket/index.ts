@@ -5,6 +5,7 @@ import { logger } from '../util/logger';
 import { TokenBucketLimiter } from '../util/rateLimit';
 import { socketAuthMiddleware } from '../auth/socketAuth';
 import type { RoomStore } from '../game/store';
+import type { GameMirror } from '../persistence/gameMirror';
 import { Broadcaster } from './broadcast';
 import { registerOperatorHandlers } from './handlers/operator';
 import { registerAudienceHandlers } from './handlers/audience';
@@ -15,7 +16,7 @@ export interface RealtimeServer {
   broadcaster: Broadcaster;
 }
 
-export function createIo(httpServer: HttpServer, store: RoomStore): RealtimeServer {
+export function createIo(httpServer: HttpServer, store: RoomStore, mirror?: GameMirror): RealtimeServer {
   const io: AppServer = new Server(httpServer, {
     cors: {
       origin: env.ALLOWED_ORIGINS,
@@ -33,7 +34,7 @@ export function createIo(httpServer: HttpServer, store: RoomStore): RealtimeServ
   const sweep = setInterval(() => voteLimiter.sweep(), 60_000);
   sweep.unref?.();
 
-  const broadcaster = new Broadcaster(io, store);
+  const broadcaster = new Broadcaster(io, store, mirror);
   broadcaster.start();
 
   io.use(socketAuthMiddleware);

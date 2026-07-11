@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 import { doc, onSnapshot } from 'firebase/firestore';
 import {
   GoogleAuthProvider, onAuthStateChanged, signInWithPopup,
@@ -71,6 +72,7 @@ export default function AudiencePage() {
   const [emailFormData, setEmailFormData] = useState({ email: '', password: '' });
   const [authError, setAuthError] = useState('');
   const [signingIn, setSigningIn] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   // Registration form state
   const [regFormData, setRegFormData] = useState({ name: '', phone: '' });
@@ -124,6 +126,7 @@ export default function AudiencePage() {
 
   async function handleGoogleSignIn() {
     setAuthError('');
+    if (!termsAccepted) { setAuthError('Please accept the Terms & Privacy Policy first.'); return; }
     setSigningIn(true);
     try {
       await signInWithPopup(auth, new GoogleAuthProvider());
@@ -137,6 +140,7 @@ export default function AudiencePage() {
   async function handleEmailAuth(e: React.FormEvent) {
     e.preventDefault();
     setAuthError('');
+    if (!termsAccepted) { setAuthError('Please accept the Terms & Privacy Policy first.'); return; }
     const { email, password } = emailFormData;
     if (password.length < 6) { setAuthError('Password must be at least 6 characters.'); return; }
     setSigningIn(true);
@@ -232,11 +236,27 @@ export default function AudiencePage() {
             <p className="text-gray-400 text-sm">Sign in to vote</p>
           </div>
 
+          {/* Terms & Privacy consent */}
+          <label className="flex items-start gap-3 text-left cursor-pointer">
+            <input
+              type="checkbox"
+              checked={termsAccepted}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-orange-500"
+            />
+            <span className="text-gray-400 text-xs leading-relaxed">
+              I agree to the{' '}
+              <Link href="/terms/" className="text-orange-400 underline">Terms &amp; Conditions</Link>{' '}
+              and{' '}
+              <Link href="/privacy/" className="text-orange-400 underline">Privacy Policy</Link>.
+            </span>
+          </label>
+
           {/* Google button */}
           <button
             onClick={handleGoogleSignIn}
-            disabled={signingIn}
-            className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 font-semibold text-base rounded-xl py-4 disabled:opacity-60 active:scale-95 transition-transform border-2 border-gray-200"
+            disabled={signingIn || !termsAccepted}
+            className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 font-semibold text-base rounded-xl py-4 disabled:opacity-60 disabled:cursor-not-allowed active:scale-95 transition-transform border-2 border-gray-200"
           >
             <GoogleIcon />
             Continue with Google
@@ -281,8 +301,8 @@ export default function AudiencePage() {
 
             <button
               type="submit"
-              disabled={signingIn}
-              className="w-full rounded-xl py-4 font-bold text-base bg-orange-500 text-white disabled:opacity-60 active:scale-95 transition-transform"
+              disabled={signingIn || !termsAccepted}
+              className="w-full rounded-xl py-4 font-bold text-base bg-orange-500 text-white disabled:opacity-60 disabled:cursor-not-allowed active:scale-95 transition-transform"
             >
               {signingIn ? 'Please wait...' : isSignUp ? 'Sign Up' : 'Sign In'}
             </button>
