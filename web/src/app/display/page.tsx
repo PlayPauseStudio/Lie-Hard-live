@@ -1195,20 +1195,20 @@ function Segment3Screen({ gameState }: { gameState: GameState }) {
                   src={player.photo}
                   alt={player.name}
                   className="rounded-full object-cover shrink-0"
-                  style={{ width: '3.75vw', height: '3.75vw', border: '2px solid rgba(245,158,11,0.25)' }}
+                  style={{ width: '5.5vw', height: '5.5vw', border: '2px solid rgba(245,158,11,0.25)' }}
                 />
                 <div className="flex-1">
                   <div className="flex justify-between" style={{ marginBottom: '0.42vw' }}>
-                    <span className="font-display font-bold text-white" style={{ fontSize: 'clamp(14px, 1.56vw, 30px)' }}>
+                    <span className="font-display font-bold text-white" style={{ fontSize: 'clamp(18px, 1.9vw, 40px)' }}>
                       {player.name}
                     </span>
-                    <span className="font-display font-bold" style={{ color: '#a1a1aa', fontSize: 'clamp(12px, 1.25vw, 24px)' }}>
+                    <span className="font-display font-bold" style={{ color: '#a1a1aa', fontSize: 'clamp(15px, 1.5vw, 30px)' }}>
                       {count} · {pct}%
                     </span>
                   </div>
                   <div
                     className="w-full rounded-full overflow-hidden"
-                    style={{ height: 'clamp(8px, 1.875vw, 36px)', backgroundColor: '#18181b' }}
+                    style={{ height: 'clamp(12px, 2.1vw, 44px)', backgroundColor: '#18181b' }}
                   >
                     <div
                       className="h-full rounded-full transition-all duration-700"
