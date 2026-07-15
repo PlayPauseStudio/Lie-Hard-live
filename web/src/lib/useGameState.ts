@@ -57,7 +57,23 @@ export function useGameState<T>(role: Role, opts: UseGameStateOptions = {}): Use
       setGameState((prev) => (prev ? { ...prev, ...msg.changed } : prev)),
     );
 
+    // Phones drop the socket when the screen locks / the tab is backgrounded.
+    // Reconnect the instant the page becomes visible again (or the network
+    // returns), instead of waiting out Socket.IO's backoff — resume feels
+    // instant and the audience never has to reload. On reconnect the server
+    // sends a fresh state:full, so state resyncs automatically.
+    const resume = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      if (!socket.connected) socket.connect();
+    };
+    document.addEventListener('visibilitychange', resume);
+    window.addEventListener('online', resume);
+    window.addEventListener('focus', resume);
+
     return () => {
+      document.removeEventListener('visibilitychange', resume);
+      window.removeEventListener('online', resume);
+      window.removeEventListener('focus', resume);
       socket.removeAllListeners();
       socket.disconnect();
       socketRef.current = null;

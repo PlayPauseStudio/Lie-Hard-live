@@ -37,10 +37,12 @@ interface VoterDoc {
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function getCurrentVotingRound(gs: GameState): string | null {
-  if (gs.warmup?.audienceVotingOpen) return `warmup-${gs.warmup.currentIndex}`;
-  if (gs.segment1?.audienceVotingOpen && gs.segment1.currentStorytellerId != null) return `seg1-${gs.segment1.currentStorytellerId}`;
-  if (gs.segment2?.audienceVotingOpen && gs.segment2.currentStorytellerId != null) return `seg2-${gs.segment2.currentStorytellerId}`;
-  if (gs.segment3?.audienceVotingOpen) return 'seg3';
+  // Gate on phase too: once the show advances (e.g. to FINAL) a leftover
+  // audienceVotingOpen flag must NOT keep a voting screen alive on phones.
+  if (gs.phase === 'WARMUP' && gs.warmup?.audienceVotingOpen) return `warmup-${gs.warmup.currentIndex}`;
+  if (gs.phase === 'SEGMENT1' && gs.segment1?.audienceVotingOpen && gs.segment1.currentStorytellerId != null) return `seg1-${gs.segment1.currentStorytellerId}`;
+  if (gs.phase === 'SEGMENT2' && gs.segment2?.audienceVotingOpen && gs.segment2.currentStorytellerId != null) return `seg2-${gs.segment2.currentStorytellerId}`;
+  if (gs.phase === 'SEGMENT3' && gs.segment3?.audienceVotingOpen) return 'seg3';
   return null;
 }
 
@@ -84,7 +86,7 @@ export default function AudiencePage() {
     () => (auth.currentUser ? auth.currentUser.getIdToken() : Promise.resolve(null)),
     [],
   );
-  const { gameState, emit } = useGameState<GameState>('audience', { getToken, enabled: !!user });
+  const { gameState, emit, connected } = useGameState<GameState>('audience', { getToken, enabled: !!user });
   const [myVote, setMyVote] = useState<{ choice: string; votingRound: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showChange, setShowChange] = useState(false);
@@ -390,14 +392,23 @@ export default function AudiencePage() {
 
   function Header() {
     return (
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
-        <span className="text-orange-500 font-bold text-sm tracking-widest">LIE HARD</span>
-        <div className="flex items-center gap-3">
-          {user?.photoURL && <img src={user.photoURL} alt="" className="w-7 h-7 rounded-full object-cover" />}
-          <span className="text-gray-400 text-sm">{(voterDoc as VoterDoc).name}</span>
-          <button className="text-gray-600 text-xs underline" onClick={() => signOut(auth)}>Sign out</button>
+      <>
+        {!connected && (
+          <div className="flex items-center justify-center gap-2 py-1.5 text-xs font-medium"
+            style={{ backgroundColor: 'rgba(245,158,11,0.15)', color: '#fbbf24', borderBottom: '1px solid rgba(245,158,11,0.3)' }}>
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: '#fbbf24' }} />
+            Reconnecting…
+          </div>
+        )}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
+          <span className="text-orange-500 font-bold text-sm tracking-widest">LIE HARD</span>
+          <div className="flex items-center gap-3">
+            {user?.photoURL && <img src={user.photoURL} alt="" className="w-7 h-7 rounded-full object-cover" />}
+            <span className="text-gray-400 text-sm">{(voterDoc as VoterDoc).name}</span>
+            <button className="text-gray-600 text-xs underline" onClick={() => signOut(auth)}>Sign out</button>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -423,11 +434,11 @@ export default function AudiencePage() {
     );
   }
 
-  const { warmup, segment1, segment2, segment3, players } = gameState;
+  const { phase, warmup, segment1, segment2, segment3, players } = gameState;
 
   // ── Warmup ────────────────────────────────────────────────────────────────
 
-  if (warmup?.audienceVotingOpen) {
+  if (phase === 'WARMUP' && warmup?.audienceVotingOpen) {
     const stmt = warmup.statements?.[warmup.currentIndex];
     return (
       <div className="bg-black min-h-screen flex flex-col">
@@ -450,7 +461,7 @@ export default function AudiencePage() {
 
   // ── Segment 1 ─────────────────────────────────────────────────────────────
 
-  if (segment1?.audienceVotingOpen && segment1.currentStorytellerId != null) {
+  if (phase === 'SEGMENT1' && segment1?.audienceVotingOpen && segment1.currentStorytellerId != null) {
     const stmtObj = segment1.statements?.find((s) => s.playerId === segment1.currentStorytellerId);
     const storytellerName = players.find((p) => p.id === segment1.currentStorytellerId)?.name ?? stmtObj?.playerName ?? '';
     return (
@@ -479,7 +490,7 @@ export default function AudiencePage() {
 
   // ── Segment 2 ─────────────────────────────────────────────────────────────
 
-  if (segment2?.audienceVotingOpen && segment2.currentStorytellerId != null) {
+  if (phase === 'SEGMENT2' && segment2?.audienceVotingOpen && segment2.currentStorytellerId != null) {
     const stmtObj = segment2.statements?.find((s) => s.playerId === segment2.currentStorytellerId);
     const storytellerName = players.find((p) => p.id === segment2.currentStorytellerId)?.name ?? stmtObj?.playerName ?? '';
     const revealed = segment2.revealedStatements ?? [];
@@ -530,7 +541,7 @@ export default function AudiencePage() {
 
   // ── Segment 3 ─────────────────────────────────────────────────────────────
 
-  if (segment3?.audienceVotingOpen) {
+  if (phase === 'SEGMENT3' && segment3?.audienceVotingOpen) {
     return (
       <div className="bg-black min-h-screen flex flex-col">
         <Header />
@@ -559,10 +570,19 @@ export default function AudiencePage() {
   return (
     <div className="bg-black min-h-screen flex flex-col">
       <Header />
-      <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6">
+      <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6 text-center">
         <h1 className="text-orange-500 text-4xl font-bold tracking-tight">LIE HARD</h1>
-        <p className="text-white text-2xl font-semibold mt-4">Voting is closed</p>
-        <p className="text-gray-500 text-base">Stay tuned...</p>
+        {phase === 'FINAL' ? (
+          <>
+            <p className="text-white text-2xl font-semibold mt-4">That&apos;s a wrap!</p>
+            <p className="text-gray-500 text-base">Thanks for playing along.</p>
+          </>
+        ) : (
+          <>
+            <p className="text-white text-2xl font-semibold mt-4">Voting is closed</p>
+            <p className="text-gray-500 text-base">Stay tuned...</p>
+          </>
+        )}
       </div>
     </div>
   );
