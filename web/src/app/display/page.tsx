@@ -300,7 +300,7 @@ function Scoreboard({
       >
         <p
           className="font-display font-bold uppercase tracking-widest"
-          style={{ color: '#f59e0b', fontSize: 'clamp(11px, 1.04vw, 20px)' }}
+          style={{ color: '#f59e0b', fontSize: 'clamp(12px, 1.15vw, 26px)' }}
         >
           Points
         </p>
@@ -332,21 +332,21 @@ function Scoreboard({
               alt={player.name}
               className="rounded-full object-cover shrink-0"
               style={{
-                width: '2.5vw',
-                height: '2.5vw',
+                width: '3.4vw',
+                height: '3.4vw',
                 border: `2px solid ${isHighlighted ? '#f59e0b' : 'rgba(245,158,11,0.2)'}`,
               }}
             />
             <div className="min-w-0">
               <p
                 className="text-white font-semibold truncate leading-tight"
-                style={{ fontSize: 'clamp(10px, 0.73vw, 14px)' }}
+                style={{ fontSize: 'clamp(13px, 1.15vw, 26px)' }}
               >
                 {player.name}
               </p>
               <p
                 className="font-display font-bold leading-tight transition-colors duration-500"
-                style={{ color: isHighlighted ? '#f59e0b' : '#e4e4e7', fontSize: 'clamp(12px, 1.25vw, 24px)' }}
+                style={{ color: isHighlighted ? '#f59e0b' : '#e4e4e7', fontSize: 'clamp(22px, 2.4vw, 52px)' }}
               >
                 {player.score}
               </p>
@@ -380,7 +380,7 @@ function LeaderboardModal({ players }: { players: Player[] }) {
   const rankColor  = (r: number) => r === 1 ? '#fbbf24' : r === 2 ? '#94a3b8' : '#cd7c2f';
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.93)' }}>
+    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center" style={{ backgroundColor: '#08080a' }}>
       {/* Confetti */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {[...Array(60)].map((_, i) => (
