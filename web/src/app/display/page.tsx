@@ -300,7 +300,7 @@ function Scoreboard({
       >
         <p
           className="font-display font-bold uppercase tracking-widest"
-          style={{ color: '#f59e0b', fontSize: 'clamp(14px, 1.4vw, 32px)' }}
+          style={{ color: '#f59e0b', fontSize: 'clamp(11px, 1.04vw, 20px)' }}
         >
           Points
         </p>
@@ -332,21 +332,21 @@ function Scoreboard({
               alt={player.name}
               className="rounded-full object-cover shrink-0"
               style={{
-                width: '4.4vw',
-                height: '4.4vw',
+                width: '2.5vw',
+                height: '2.5vw',
                 border: `2px solid ${isHighlighted ? '#f59e0b' : 'rgba(245,158,11,0.2)'}`,
               }}
             />
             <div className="min-w-0">
               <p
                 className="text-white font-semibold truncate leading-tight"
-                style={{ fontSize: 'clamp(16px, 1.5vw, 34px)' }}
+                style={{ fontSize: 'clamp(10px, 0.73vw, 14px)' }}
               >
                 {player.name}
               </p>
               <p
                 className="font-display font-bold leading-tight transition-colors duration-500"
-                style={{ color: isHighlighted ? '#f59e0b' : '#e4e4e7', fontSize: 'clamp(30px, 3.2vw, 72px)' }}
+                style={{ color: isHighlighted ? '#f59e0b' : '#e4e4e7', fontSize: 'clamp(12px, 1.25vw, 24px)' }}
               >
                 {player.score}
               </p>
@@ -740,8 +740,8 @@ function Segment1Screen({ gameState }: { gameState: GameState }) {
         <div className="flex-1 min-h-0 flex items-center relative" style={{ padding: '0 5vw 1.5vw', gap: '2vw' }}>
           <div className="flex-1 min-w-0 flex flex-col" style={{ gap: '0.75vw' }}>
             <div className='flex items-center'>
-              <PlayerAvatar player={storyteller} vwSize={4} />
-              <p className="font-display font-bold text-white leading-none ml-4" style={{ fontSize: 'clamp(16px, 2vw, 40px)' }}>
+              <PlayerAvatar player={storyteller} vwSize={7} />
+              <p className="font-display font-bold text-white leading-none ml-4" style={{ fontSize: 'clamp(24px, 3vw, 60px)' }}>
                 {storyteller.name}
               </p>
             </div>
@@ -775,10 +775,10 @@ function Segment1Screen({ gameState }: { gameState: GameState }) {
                 return (
                   <div key={player.id} className="flex items-center gap-2">
                     <img src={player.photo} alt={player.name} className="rounded-full object-cover shrink-0"
-                      style={{ width: '2.5vw', height: '2.5vw', border: `2px solid ${vote ? voteColor : 'rgba(245,158,11,0.2)'}` }} />
+                      style={{ width: '4.5vw', height: '4.5vw', border: `2px solid ${vote ? voteColor : 'rgba(245,158,11,0.2)'}` }} />
                     <div className='flex items-center justify-between w-full'>
-                      <p className="font-display font-bold text-white leading-tight" style={{ fontSize: 'clamp(10px, 1vw, 20px)' }}>{player.name}</p>
-                      <p className="font-display font-bold leading-tight" style={{ color: voteColor, fontSize: 'clamp(12px, 1.25vw, 24px)' }}>{vote ?? '—'}</p>
+                      <p className="font-display font-bold text-white leading-tight" style={{ fontSize: 'clamp(16px, 1.7vw, 34px)' }}>{player.name}</p>
+                      <p className="font-display font-bold leading-tight" style={{ color: voteColor, fontSize: 'clamp(20px, 2.1vw, 42px)' }}>{vote ?? '—'}</p>
                     </div>
                   </div>
                 );
@@ -913,8 +913,8 @@ function Segment2Screen({ gameState }: { gameState: GameState }) {
         {/* Row 1 (primary): Player photo + name + reveal */}
         <div className="flex-1 min-h-0 flex items-center justify-between relative" style={{ padding: '2vw 5vw 1vw', gap: '1vw' }}>
           <div className='flex items-center justify-between'>
-            <PlayerAvatar player={storyteller} vwSize={5} />
-            <p className="font-display font-bold text-white leading-none ml-4" style={{ fontSize: 'clamp(16px, 2.5vw, 48px)' }}>
+            <PlayerAvatar player={storyteller} vwSize={7.5} />
+            <p className="font-display font-bold text-white leading-none ml-4" style={{ fontSize: 'clamp(26px, 3.2vw, 64px)' }}>
               {storyteller.name}
             </p>
           </div>
@@ -967,10 +967,10 @@ function Segment2Screen({ gameState }: { gameState: GameState }) {
                 return (
                   <div key={player.id} className="flex items-center gap-2">
                     <img src={player.photo} alt={player.name} className="rounded-full object-cover shrink-0"
-                      style={{ width: '2.5vw', height: '2.5vw', border: `2px solid ${vote ? voteColor : 'rgba(245,158,11,0.2)'}` }} />
+                      style={{ width: '4.5vw', height: '4.5vw', border: `2px solid ${vote ? voteColor : 'rgba(245,158,11,0.2)'}` }} />
                     <div className='flex justify-between items-center w-full'>
-                      <p className="font-display font-bold text-white leading-tight" style={{ fontSize: 'clamp(10px, 1vw, 20px)' }}>{player.name}</p>
-                      <p className="font-display font-bold leading-tight" style={{ color: voteColor, fontSize: 'clamp(12px, 1.25vw, 24px)' }}>{voteLabel ?? '—'}</p>
+                      <p className="font-display font-bold text-white leading-tight" style={{ fontSize: 'clamp(16px, 1.7vw, 34px)' }}>{player.name}</p>
+                      <p className="font-display font-bold leading-tight" style={{ color: voteColor, fontSize: 'clamp(20px, 2.1vw, 42px)' }}>{voteLabel ?? '—'}</p>
                     </div>
                   </div>
                 );
@@ -1378,8 +1378,8 @@ export default function DisplayPage() {
         <div
           className="flex items-center rounded-full"
           style={{
-            gap: '0.7vw',
-            padding: '0.7vw 1.5vw',
+            gap: '0.63vw',
+            padding: '0.52vw 1.04vw',
             backgroundColor: '#08080a',
             border: `1px solid ${votingStatus === 'open' ? '#166534' : votingStatus === 'closed' ? '#27272a' : 'rgba(245,158,11,0.25)'}`,
           }}
@@ -1387,8 +1387,8 @@ export default function DisplayPage() {
           <span
             className={`rounded-full shrink-0 ${votingStatus === 'open' ? 'animate-pulse' : ''}`}
             style={{
-              width: '0.7vw',
-              height: '0.7vw',
+              width: '0.42vw',
+              height: '0.42vw',
               backgroundColor: votingStatus === 'open' ? '#4ade80' : votingStatus === 'closed' ? '#52525b' : '#f59e0b',
             }}
           />
@@ -1396,7 +1396,7 @@ export default function DisplayPage() {
             className="font-mono font-bold uppercase tracking-widest"
             style={{
               color: votingStatus === 'open' ? '#4ade80' : votingStatus === 'closed' ? '#52525b' : '#f59e0b',
-              fontSize: 'clamp(15px, 1.35vw, 30px)',
+              fontSize: 'clamp(10px, 0.73vw, 14px)',
             }}
           >
             {votingStatus === 'open' ? 'Voting Open' : votingStatus === 'closed' ? 'Voting Closed' : 'Voting Locked'}
