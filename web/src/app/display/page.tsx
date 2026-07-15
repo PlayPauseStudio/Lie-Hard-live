@@ -809,7 +809,7 @@ function Segment1Screen({ gameState }: { gameState: GameState }) {
       {/* Row 1: current player + statement (left-aligned) */}
       <div className="w-full p-6" style={{ borderBottom: '1px solid rgba(245,158,11,0.12)'}}>
         <div className="flex items-center" style={{ gap: '1.25vw', marginBottom: '0.83vw' }}>
-          <PlayerAvatar player={storyteller} vwSize={4.58} />
+          <PlayerAvatar player={storyteller} vwSize={9} />
           <div>
             <p className="font-display font-bold text-white leading-none" style={{ fontSize: 'clamp(18px, 2.71vw, 52px)' }}>
               {storyteller.name}
@@ -847,7 +847,7 @@ function Segment1Screen({ gameState }: { gameState: GameState }) {
                       src={player.photo}
                       alt={player.name}
                       className="rounded-full object-cover shrink-0"
-                      style={{ width: '4.17vw', height: '4.17vw', border: `2px solid ${vote ? voteColor : 'rgba(245,158,11,0.2)'}` }}
+                      style={{ width: '7vw', height: '7vw', border: `2px solid ${vote ? voteColor : 'rgba(245,158,11,0.2)'}` }}
                     />
                     <div>
                       <p className="font-display font-bold text-white text-2xl leading-tight">
@@ -1001,7 +1001,7 @@ function Segment2Screen({ gameState }: { gameState: GameState }) {
       {/* Row 1: current player + statements (left-aligned) */}
       <div className="w-full p-6" style={{ borderBottom: '1px solid rgba(245,158,11,0.12)' }}>
         <div className="flex items-center" style={{ gap: '1.67vw', marginBottom: '0.83vw' }}>
-          <PlayerAvatar player={storyteller} vwSize={5.21} />
+          <PlayerAvatar player={storyteller} vwSize={9.5} />
           <div>
             <p className="font-display font-bold text-white leading-none" style={{ fontSize: 'clamp(18px, 2.71vw, 52px)' }}>
               {storyteller.name}
@@ -1057,7 +1057,7 @@ function Segment2Screen({ gameState }: { gameState: GameState }) {
                       src={player.photo}
                       alt={player.name}
                       className="rounded-full object-cover shrink-0"
-                      style={{ width: '4.17vw', height: '4.17vw', border: `2px solid ${vote ? voteColor : 'rgba(245,158,11,0.2)'}` }}
+                      style={{ width: '7vw', height: '7vw', border: `2px solid ${vote ? voteColor : 'rgba(245,158,11,0.2)'}` }}
                     />
                     <div>
                       <p className="font-display font-bold text-white text-2xl leading-tight">
