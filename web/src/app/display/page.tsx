@@ -300,7 +300,7 @@ function Scoreboard({
       >
         <p
           className="font-display font-bold uppercase tracking-widest"
-          style={{ color: '#f59e0b', fontSize: 'clamp(12px, 1.15vw, 26px)' }}
+          style={{ color: '#f59e0b', fontSize: 'clamp(14px, 1.4vw, 32px)' }}
         >
           Points
         </p>
@@ -332,21 +332,21 @@ function Scoreboard({
               alt={player.name}
               className="rounded-full object-cover shrink-0"
               style={{
-                width: '3.4vw',
-                height: '3.4vw',
+                width: '4.4vw',
+                height: '4.4vw',
                 border: `2px solid ${isHighlighted ? '#f59e0b' : 'rgba(245,158,11,0.2)'}`,
               }}
             />
             <div className="min-w-0">
               <p
                 className="text-white font-semibold truncate leading-tight"
-                style={{ fontSize: 'clamp(13px, 1.15vw, 26px)' }}
+                style={{ fontSize: 'clamp(16px, 1.5vw, 34px)' }}
               >
                 {player.name}
               </p>
               <p
                 className="font-display font-bold leading-tight transition-colors duration-500"
-                style={{ color: isHighlighted ? '#f59e0b' : '#e4e4e7', fontSize: 'clamp(22px, 2.4vw, 52px)' }}
+                style={{ color: isHighlighted ? '#f59e0b' : '#e4e4e7', fontSize: 'clamp(30px, 3.2vw, 72px)' }}
               >
                 {player.score}
               </p>
@@ -1378,8 +1378,8 @@ export default function DisplayPage() {
         <div
           className="flex items-center rounded-full"
           style={{
-            gap: '0.63vw',
-            padding: '0.52vw 1.04vw',
+            gap: '0.7vw',
+            padding: '0.7vw 1.5vw',
             backgroundColor: '#08080a',
             border: `1px solid ${votingStatus === 'open' ? '#166534' : votingStatus === 'closed' ? '#27272a' : 'rgba(245,158,11,0.25)'}`,
           }}
@@ -1387,8 +1387,8 @@ export default function DisplayPage() {
           <span
             className={`rounded-full shrink-0 ${votingStatus === 'open' ? 'animate-pulse' : ''}`}
             style={{
-              width: '0.42vw',
-              height: '0.42vw',
+              width: '0.7vw',
+              height: '0.7vw',
               backgroundColor: votingStatus === 'open' ? '#4ade80' : votingStatus === 'closed' ? '#52525b' : '#f59e0b',
             }}
           />
@@ -1396,7 +1396,7 @@ export default function DisplayPage() {
             className="font-mono font-bold uppercase tracking-widest"
             style={{
               color: votingStatus === 'open' ? '#4ade80' : votingStatus === 'closed' ? '#52525b' : '#f59e0b',
-              fontSize: 'clamp(10px, 0.73vw, 14px)',
+              fontSize: 'clamp(15px, 1.35vw, 30px)',
             }}
           >
             {votingStatus === 'open' ? 'Voting Open' : votingStatus === 'closed' ? 'Voting Closed' : 'Voting Locked'}
