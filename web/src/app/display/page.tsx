@@ -373,8 +373,8 @@ function LeaderboardModal({ players }: { players: Player[] }) {
 
   const podium     = sorted.length >= 3 ? [sorted[1], sorted[0], sorted[2]] : sorted.length === 2 ? [sorted[1], sorted[0]] : sorted;
   const podiumRank = sorted.length >= 3 ? [2, 1, 3]                         : sorted.length === 2 ? [2, 1]                 : [1];
-  const vwSizes    = sorted.length >= 3 ? [7.81, 10.42, 6.77]               : sorted.length === 2 ? [8.33, 10.42]          : [11.46];
-  const blockVh    = sorted.length >= 3 ? [11.11, 16.67, 7.41]              : sorted.length === 2 ? [11.11, 16.67]         : [16.67];
+  const vwSizes    = sorted.length >= 3 ? [10.5, 13.5, 9]                    : sorted.length === 2 ? [11, 13.5]             : [14];
+  const blockVh    = sorted.length >= 3 ? [16, 24, 11]                       : sorted.length === 2 ? [16, 24]               : [24];
 
   const rankBorder = (r: number) => r === 1 ? '#fbbf24' : r === 2 ? '#94a3b8' : '#cd7c2f';
   const rankColor  = (r: number) => r === 1 ? '#fbbf24' : r === 2 ? '#94a3b8' : '#cd7c2f';
@@ -415,13 +415,13 @@ function LeaderboardModal({ players }: { players: Player[] }) {
       </div>
       <p
         className="font-display tracking-widest"
-        style={{ color: '#3f3f46', fontSize: 'clamp(14px, 1.56vw, 30px)', marginBottom: '3.13vw' }}
+        style={{ color: '#8a8a94', fontSize: 'clamp(18px, 2vw, 40px)', marginBottom: '2.5vw' }}
       >
         FINAL STANDINGS
       </p>
 
       {/* Podium */}
-      <div className="flex items-end" style={{ gap: '2.08vw' }}>
+      <div className="flex items-end" style={{ gap: '3vw' }}>
         {podium.map((player, i) => {
           const rank    = podiumRank[i];
           const isFirst = rank === 1;
@@ -442,13 +442,13 @@ function LeaderboardModal({ players }: { players: Player[] }) {
               />
               <p
                 className="font-bold text-center"
-                style={{ fontSize: isFirst ? 'clamp(18px, 2.5vw, 48px)' : 'clamp(16px, 2.08vw, 40px)', color: isFirst ? '#ffffff' : '#a1a1aa' }}
+                style={{ fontSize: isFirst ? 'clamp(26px, 3.2vw, 62px)' : 'clamp(22px, 2.6vw, 50px)', color: isFirst ? '#ffffff' : '#d4d4d8' }}
               >
                 {player.name}
               </p>
               <p
-                className="font-display font-bold"
-                style={{ color: isFirst ? '#f59e0b' : '#52525b', fontSize: 'clamp(14px, 1.56vw, 30px)' }}
+                className="font-display font-black"
+                style={{ color: isFirst ? '#f59e0b' : '#e4e4e7', fontSize: 'clamp(24px, 2.7vw, 54px)' }}
               >
                 {player.score} pts
               </p>
@@ -456,7 +456,7 @@ function LeaderboardModal({ players }: { players: Player[] }) {
               <div
                 className="rounded-t-2xl flex items-center justify-center"
                 style={{
-                  width: '9.17vw',
+                  width: '11.5vw',
                   height: `${blockH}vh`,
                   backgroundColor: isFirst ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.03)',
                   border: `1px solid ${isFirst ? 'rgba(245,158,11,0.4)' : 'rgba(245,158,11,0.15)'}`,
@@ -464,7 +464,7 @@ function LeaderboardModal({ players }: { players: Player[] }) {
               >
                 <span
                   className="font-display font-black"
-                  style={{ color: rankColor(rank), fontSize: 'clamp(20px, 3.13vw, 60px)' }}
+                  style={{ color: rankColor(rank), fontSize: 'clamp(30px, 4vw, 80px)' }}
                 >
                   #{rank}
                 </span>
@@ -1369,11 +1369,8 @@ export default function DisplayPage() {
           </p>
         </div>
 
-        <div>
-          {showScoreboard && (
-            <Scoreboard players={players} highlightedIds={highlightedIds} />
-          )}
-        </div>
+        {/* scoreboard floats separately (below) so it doesn't take layout space */}
+        <div />
 
         <div
           className="flex items-center rounded-full"
@@ -1403,6 +1400,13 @@ export default function DisplayPage() {
           </span>
         </div>
       </div>)}
+
+      {/* Floating scoreboard — slides down and sits in front of the content */}
+      {!hideTopBar && showScoreboard && (
+        <div className="absolute z-40 animate-slide-down" style={{ top: 'clamp(8px, 1.1vw, 24px)', left: '50%' }}>
+          <Scoreboard players={players} highlightedIds={highlightedIds} />
+        </div>
+      )}
 
       {/* Main content */}
       <div className="w-full flex-1 min-h-0 relative">
