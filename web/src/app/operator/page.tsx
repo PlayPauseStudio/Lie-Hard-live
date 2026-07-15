@@ -441,6 +441,8 @@ export default function OperatorPage() {
 
   function validateAndStart() {
     const errors: string[] = [];
+    if (playerCount < 2) errors.push('Need at least 2 players.');
+    if (playerCount > 10) errors.push('Maximum 10 players allowed.');
     if (playerNames.some((n) => !n.trim())) errors.push(`All ${playerCount} player names must be filled.`);
     if (warmupData.length < 1) errors.push('Warmup CSV must have at least 1 row.');
     if (seg1Data.length !== playerCount) errors.push(`Segment 1 CSV must have exactly ${playerCount} rows (one per player).`);
@@ -873,13 +875,14 @@ export default function OperatorPage() {
               const raw = e.target.value;
               if (raw === '') { setPlayerCount(0); return; }
               const v = parseInt(raw);
-              if (!isNaN(v)) setPlayerCount(v);
+              if (!isNaN(v)) setPlayerCount(Math.min(10, Math.max(0, v)));
             }}
-            onBlur={() => { if (playerCount > 0) setPlayerCount((c) => Math.max(2, c)); }}
+            onBlur={() => { if (playerCount > 0) setPlayerCount((c) => Math.min(10, Math.max(2, c))); }}
             className="w-32 px-4 py-3 rounded-lg font-mono text-xl outline-none"
             style={{ backgroundColor: '#18181b', border: '1px solid #3f3f46', color: '#fafafa' }}
             onFocus={(e) => (e.target.style.borderColor = '#f59e0b')}
           />
+          <p className="font-mono text-xs" style={{ color: '#52525b' }}>2–10 players (max 10).</p>
           {playerCount === 1 && (
             <p className="font-mono text-sm" style={{ color: '#f87171' }}>Need at least 2 players.</p>
           )}
