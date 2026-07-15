@@ -740,7 +740,7 @@ function Segment1Screen({ gameState }: { gameState: GameState }) {
         <div className="flex-1 min-h-0 flex items-center relative" style={{ padding: '0 5vw 1.5vw', gap: '2vw' }}>
           <div className="flex-1 min-w-0 flex flex-col" style={{ gap: '0.75vw' }}>
             <div className='flex items-center'>
-              <PlayerAvatar player={storyteller} vwSize={7} />
+              <PlayerAvatar player={storyteller} vwSize={11} />
               <p className="font-display font-bold text-white leading-none ml-4" style={{ fontSize: 'clamp(24px, 3vw, 60px)' }}>
                 {storyteller.name}
               </p>
@@ -775,7 +775,7 @@ function Segment1Screen({ gameState }: { gameState: GameState }) {
                 return (
                   <div key={player.id} className="flex items-center gap-2">
                     <img src={player.photo} alt={player.name} className="rounded-full object-cover shrink-0"
-                      style={{ width: '4.5vw', height: '4.5vw', border: `2px solid ${vote ? voteColor : 'rgba(245,158,11,0.2)'}` }} />
+                      style={{ width: '7vw', height: '7vw', border: `2px solid ${vote ? voteColor : 'rgba(245,158,11,0.2)'}` }} />
                     <div className='flex items-center justify-between w-full'>
                       <p className="font-display font-bold text-white leading-tight" style={{ fontSize: 'clamp(16px, 1.7vw, 34px)' }}>{player.name}</p>
                       <p className="font-display font-bold leading-tight" style={{ color: voteColor, fontSize: 'clamp(20px, 2.1vw, 42px)' }}>{vote ?? '—'}</p>
@@ -913,7 +913,7 @@ function Segment2Screen({ gameState }: { gameState: GameState }) {
         {/* Row 1 (primary): Player photo + name + reveal */}
         <div className="flex-1 min-h-0 flex items-center justify-between relative" style={{ padding: '2vw 5vw 1vw', gap: '1vw' }}>
           <div className='flex items-center justify-between'>
-            <PlayerAvatar player={storyteller} vwSize={7.5} />
+            <PlayerAvatar player={storyteller} vwSize={11.5} />
             <p className="font-display font-bold text-white leading-none ml-4" style={{ fontSize: 'clamp(26px, 3.2vw, 64px)' }}>
               {storyteller.name}
             </p>
@@ -967,7 +967,7 @@ function Segment2Screen({ gameState }: { gameState: GameState }) {
                 return (
                   <div key={player.id} className="flex items-center gap-2">
                     <img src={player.photo} alt={player.name} className="rounded-full object-cover shrink-0"
-                      style={{ width: '4.5vw', height: '4.5vw', border: `2px solid ${vote ? voteColor : 'rgba(245,158,11,0.2)'}` }} />
+                      style={{ width: '7vw', height: '7vw', border: `2px solid ${vote ? voteColor : 'rgba(245,158,11,0.2)'}` }} />
                     <div className='flex justify-between items-center w-full'>
                       <p className="font-display font-bold text-white leading-tight" style={{ fontSize: 'clamp(16px, 1.7vw, 34px)' }}>{player.name}</p>
                       <p className="font-display font-bold leading-tight" style={{ color: voteColor, fontSize: 'clamp(20px, 2.1vw, 42px)' }}>{voteLabel ?? '—'}</p>
