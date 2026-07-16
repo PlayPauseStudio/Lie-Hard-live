@@ -664,13 +664,13 @@ function WarmupScreen({ gameState }: { gameState: GameState }) {
     );
   }
 
-  if (warmup.audienceVotingOpen && stmt) {
+  if (stmt) {
     return (
       <div
         className="w-full h-full flex flex-col items-center justify-center"
         style={{ backgroundColor: '#08080a', gap: '2.08vw', padding: '0 5vw' }}
       >
-        
+
         <div className="w-full max-w-5xl">
           <StatementCard text={stmt.statement} />
         </div>
@@ -683,16 +683,15 @@ function WarmupScreen({ gameState }: { gameState: GameState }) {
     );
   }
 
+  // No warmup statement loaded — idle screen.
   return (
     <div
       className="w-full h-full flex flex-col items-center justify-center"
-      style={{ backgroundColor: '#08080a', gap: '2.08vw', padding: '0 5vw' }}
+      style={{ backgroundColor: '#08080a' }}
     >
-      {stmt && (
-        <div className="w-full max-w-5xl">
-          <StatementCard text={stmt.statement} />
-        </div>
-      )}
+      <p className="font-display tracking-widest animate-breathe" style={{ color: '#2d2d2d', fontSize: 'clamp(18px, 2.5vw, 48px)' }}>
+        WARMUP
+      </p>
     </div>
   );
 }
@@ -1202,27 +1201,33 @@ function Segment3Screen({ gameState }: { gameState: GameState }) {
                     <span className="font-display font-bold text-white" style={{ fontSize: 'clamp(18px, 1.9vw, 40px)' }}>
                       {player.name}
                     </span>
-                    <span className="font-display font-bold" style={{ color: '#a1a1aa', fontSize: 'clamp(15px, 1.5vw, 30px)' }}>
-                      {count} · {pct}%
-                    </span>
+                    {(gameState.showVoteBars ?? true) && (
+                      <span className="font-display font-bold" style={{ color: '#a1a1aa', fontSize: 'clamp(15px, 1.5vw, 30px)' }}>
+                        {count} · {pct}%
+                      </span>
+                    )}
                   </div>
-                  <div
-                    className="w-full rounded-full overflow-hidden"
-                    style={{ height: 'clamp(12px, 2.1vw, 44px)', backgroundColor: '#18181b' }}
-                  >
+                  {(gameState.showVoteBars ?? true) && (
                     <div
-                      className="h-full rounded-full transition-all duration-700"
-                      style={{ width: `${pct}%`, backgroundColor: '#f59e0b' }}
-                    />
-                  </div>
+                      className="w-full rounded-full overflow-hidden"
+                      style={{ height: 'clamp(12px, 2.1vw, 44px)', backgroundColor: '#18181b' }}
+                    >
+                      <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${pct}%`, backgroundColor: '#f59e0b' }}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
-        <p className="font-mono" style={{ color: '#3f3f46', fontSize: 'clamp(11px, 1.04vw, 20px)' }}>
-          {totalVotes} vote{totalVotes !== 1 ? 's' : ''}
-        </p>
+        {(gameState.showVoteBars ?? true) && (
+          <p className="font-mono" style={{ color: '#3f3f46', fontSize: 'clamp(11px, 1.04vw, 20px)' }}>
+            {totalVotes} vote{totalVotes !== 1 ? 's' : ''}
+          </p>
+        )}
       </div>
     </div>
   );
