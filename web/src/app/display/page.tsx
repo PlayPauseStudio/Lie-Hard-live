@@ -476,56 +476,71 @@ function TopVotersOverlay({ voterScores }: { voterScores: GameState['voterScores
     .sort(([, a], [, b]) => b.correctCount - a.correctCount)
     .slice(0, 3);
 
-  const medals      = ['🥇', '🥈', '🥉'];
-  const medalColors = ['#fbbf24', '#94a3b8', '#cd7c2f'];
+  // Gold / silver / bronze — designed discs, not emoji (emoji render badly on TVs).
+  const medal      = ['#fbbf24', '#cbd5e1', '#d98c3f'];
+  const medalLight = ['#fde68a', '#f8fafc', '#f2b280'];
 
   return (
-    <div
-      className="absolute bottom-0 right-0 z-30"
-      style={{ width: 'clamp(200px, 22.9vw, 440px)', padding: '1.04vw' }}
-    >
+    <div className="absolute bottom-0 left-0 right-0 z-30 animate-slide-up-bar">
+      {/* Bright accent line riding the top edge of the bar */}
+      <div style={{ height: '0.3vw', background: 'linear-gradient(90deg, #d97706, #fbbf24, #d97706)' }} />
       <div
-        className="rounded-3xl"
+        className="flex items-stretch"
         style={{
-          backgroundColor: '#0a0a0c',
-          border: '2px solid rgba(245,158,11,0.4)',
-          boxShadow: '0 0 2.08vw rgba(245,158,11,0.1)',
-          padding: 'clamp(12px, 1.67vw, 32px) clamp(16px, 2.08vw, 40px)',
+          background: 'linear-gradient(180deg, rgba(10,10,12,0.94), rgba(6,6,8,0.99))',
+          boxShadow: '0 -0.6vw 2.5vw rgba(0,0,0,0.55)',
         }}
       >
-        <p
-          className="font-display font-black uppercase tracking-widest text-center"
-          style={{ color: '#f59e0b', fontSize: 'clamp(14px, 1.56vw, 30px)', marginBottom: '1.25vw' }}
+        {/* Brand block */}
+        <div
+          className="flex flex-col justify-center shrink-0"
+          style={{
+            background: 'linear-gradient(160deg, #fbbf24, #d97706)',
+            padding: 'clamp(10px, 1.1vw, 26px) clamp(18px, 2vw, 46px)',
+          }}
         >
-          Top Voters
-        </p>
-        {sorted.length === 0 ? (
-          <p className="text-center" style={{ color: '#3f3f46', fontSize: 'clamp(11px, 1.04vw, 20px)' }}>No votes yet</p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.63vw' }}>
-            {sorted.map(([uid, data], rank) => (
-              <div
-                key={uid}
-                className="flex items-center rounded-xl"
-                style={{ gap: '0.83vw', padding: '0.42vw 0.63vw', backgroundColor: 'rgba(255,255,255,0.03)' }}
-              >
-                <span style={{ fontSize: 'clamp(14px, 2.08vw, 40px)' }} className="shrink-0">{medals[rank]}</span>
+          <span className="font-display font-black uppercase leading-none" style={{ color: '#1a1204', fontSize: 'clamp(18px, 2vw, 42px)', letterSpacing: '0.02em' }}>Top</span>
+          <span className="font-display font-black uppercase leading-none" style={{ color: '#1a1204', fontSize: 'clamp(18px, 2vw, 42px)', letterSpacing: '0.02em' }}>Voters</span>
+        </div>
+
+        {/* Ranked entries, spread across the bar */}
+        <div className="flex-1 flex items-center justify-around" style={{ padding: 'clamp(8px, 1vw, 24px) clamp(12px, 2vw, 48px)' }}>
+          {sorted.length === 0 ? (
+            <span className="font-display uppercase tracking-widest" style={{ color: '#52525b', fontSize: 'clamp(12px, 1.2vw, 24px)' }}>No votes yet</span>
+          ) : sorted.map(([uid, data], rank) => {
+            const first = rank === 0;
+            const disc  = first ? 'clamp(36px, 3.6vw, 76px)' : 'clamp(30px, 2.9vw, 60px)';
+            return (
+              <div key={uid} className="flex items-center shrink-0" style={{ gap: 'clamp(8px, 0.9vw, 20px)' }}>
+                {/* Rank disc */}
+                <div
+                  className="shrink-0 flex items-center justify-center"
+                  style={{
+                    width: disc, height: disc, borderRadius: '9999px',
+                    background: `radial-gradient(circle at 34% 28%, ${medalLight[rank]}, ${medal[rank]})`,
+                    boxShadow: `0 0 1.2vw ${medal[rank]}55, inset 0 0 0 2px rgba(255,255,255,0.35)`,
+                  }}
+                >
+                  <span className="font-display font-black" style={{ color: '#1a1204', fontSize: first ? 'clamp(18px, 1.9vw, 40px)' : 'clamp(15px, 1.5vw, 32px)' }}>{rank + 1}</span>
+                </div>
+                {/* Name */}
                 <span
-                  className="text-white font-bold flex-1 truncate"
-                  style={{ fontSize: 'clamp(12px, 1.25vw, 24px)' }}
+                  className="font-display font-bold text-white truncate"
+                  style={{ maxWidth: 'clamp(110px, 13vw, 320px)', fontSize: first ? 'clamp(18px, 1.95vw, 42px)' : 'clamp(16px, 1.6vw, 34px)' }}
                 >
                   {data.name}
                 </span>
+                {/* Count */}
                 <span
                   className="font-display font-black shrink-0"
-                  style={{ color: medalColors[rank], fontSize: 'clamp(12px, 1.25vw, 24px)' }}
+                  style={{ color: medal[rank], fontSize: first ? 'clamp(20px, 2.1vw, 46px)' : 'clamp(18px, 1.8vw, 38px)', fontVariantNumeric: 'tabular-nums' }}
                 >
-                  {data.correctCount} ✓
+                  {data.correctCount}<span style={{ fontSize: '0.62em', marginLeft: '0.12em' }}>✓</span>
                 </span>
               </div>
-            ))}
-          </div>
-        )}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
