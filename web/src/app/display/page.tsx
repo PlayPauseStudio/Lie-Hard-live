@@ -869,15 +869,15 @@ function Segment1Screen({ gameState }: { gameState: GameState }) {
             <p className="font-display uppercase tracking-widest text-2xl" style={{ color: '#52525b'}}>
               Audience Votes
             </p>
-            {segment1.audienceVotingOpen && (gameState.showVoteBars ?? true) && (
+            {(gameState.showVoteBars ?? true) && (
               <p className="font-display text-xl" style={{ color: '#3f3f46'}}>
                 {Object.values(counts).reduce((a, b) => a + b, 0)} vote{Object.values(counts).reduce((a, b) => a + b, 0) !== 1 ? 's' : ''}
               </p>
             )}
           </div>
-          {segment1.audienceVotingOpen && (gameState.showVoteBars ?? true) ? (
+          {(gameState.showVoteBars ?? true) ? (
             <VoteBars counts={counts} hideFooter />
-          ) : waitingCard('Waiting for audience votes...')}
+          ) : waitingCard('Vote bars hidden')}
         </div>
       </div>
     </div>
@@ -1079,15 +1079,15 @@ function Segment2Screen({ gameState }: { gameState: GameState }) {
             <p className="font-display uppercase tracking-widest text-2xl" style={{ color: '#52525b' }}>
               Audience Votes
             </p>
-            {segment2.audienceVotingOpen && (gameState.showVoteBars ?? true) && (
+            {(gameState.showVoteBars ?? true) && (
               <p className="font-display" style={{ color: '#3f3f46', fontSize: 'clamp(11px, 0.94vw, 18px)' }}>
                 {Object.values(counts).reduce((a, b) => a + b, 0)} vote{Object.values(counts).reduce((a, b) => a + b, 0) !== 1 ? 's' : ''}
               </p>
             )}
           </div>
-          {segment2.audienceVotingOpen && (gameState.showVoteBars ?? true) ? (
+          {(gameState.showVoteBars ?? true) ? (
             <VoteBars counts={counts} labels={labels} hideFooter />
-          ) : waitingCard2('Waiting for audience votes...')}
+          ) : waitingCard2('Vote bars hidden')}
         </div>
       </div>
     </div>
