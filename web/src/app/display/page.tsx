@@ -373,14 +373,14 @@ function LeaderboardModal({ players }: { players: Player[] }) {
 
   const podium     = sorted.length >= 3 ? [sorted[1], sorted[0], sorted[2]] : sorted.length === 2 ? [sorted[1], sorted[0]] : sorted;
   const podiumRank = sorted.length >= 3 ? [2, 1, 3]                         : sorted.length === 2 ? [2, 1]                 : [1];
-  const vwSizes    = sorted.length >= 3 ? [10.5, 13.5, 9]                    : sorted.length === 2 ? [11, 13.5]             : [14];
-  const blockVh    = sorted.length >= 3 ? [16, 24, 11]                       : sorted.length === 2 ? [16, 24]               : [24];
+  const vwSizes    = sorted.length >= 3 ? [13, 16.5, 11.5]                   : sorted.length === 2 ? [13.5, 16.5]           : [17];
+  const blockVh    = sorted.length >= 3 ? [20, 30, 14]                       : sorted.length === 2 ? [20, 30]               : [30];
 
   const rankBorder = (r: number) => r === 1 ? '#fbbf24' : r === 2 ? '#94a3b8' : '#cd7c2f';
   const rankColor  = (r: number) => r === 1 ? '#fbbf24' : r === 2 ? '#94a3b8' : '#cd7c2f';
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center" style={{ backgroundColor: '#08080a' }}>
+    <div className="absolute inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: '#08080a' }}>
       {/* Confetti */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {[...Array(60)].map((_, i) => (
@@ -400,28 +400,20 @@ function LeaderboardModal({ players }: { players: Player[] }) {
         ))}
       </div>
 
-      {/* Title */}
-      <div className="relative" style={{ marginBottom: '0.42vw' }}>
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse at center, rgba(245,158,11,0.2) 0%, transparent 70%)' }}
-        />
-        <h1
-          className="font-display font-black tracking-tight relative"
-          style={{ fontSize: 'clamp(40px, 5.63vw, 108px)', color: '#f59e0b', textShadow: '0 0 4.17vw rgba(245,158,11,0.4)' }}
-        >
-          Lie Hard
-        </h1>
-      </div>
-      <p
-        className="font-display tracking-widest"
-        style={{ color: '#8a8a94', fontSize: 'clamp(18px, 2vw, 40px)', marginBottom: '2.5vw' }}
+      {/* Heading — top-left, huge & bright */}
+      <h1
+        className="absolute font-display font-black tracking-tight"
+        style={{
+          top: 'clamp(16px, 2.2vw, 56px)', left: 'clamp(24px, 3.5vw, 80px)',
+          fontSize: 'clamp(48px, 7vw, 160px)', lineHeight: 0.9,
+          color: '#fbbf24', textShadow: '0 0 4vw rgba(245,158,11,0.5)',
+        }}
       >
-        FINAL STANDINGS
-      </p>
+        SCOREBOARD
+      </h1>
 
-      {/* Podium */}
-      <div className="flex items-end" style={{ gap: '3vw' }}>
+      {/* Podium — centered */}
+      <div className="flex items-end relative" style={{ gap: '3.5vw' }}>
         {podium.map((player, i) => {
           const rank    = podiumRank[i];
           const isFirst = rank === 1;
@@ -442,13 +434,13 @@ function LeaderboardModal({ players }: { players: Player[] }) {
               />
               <p
                 className="font-bold text-center"
-                style={{ fontSize: isFirst ? 'clamp(26px, 3.2vw, 62px)' : 'clamp(22px, 2.6vw, 50px)', color: isFirst ? '#ffffff' : '#d4d4d8' }}
+                style={{ fontSize: isFirst ? 'clamp(34px, 3.8vw, 74px)' : 'clamp(28px, 3.1vw, 60px)', color: isFirst ? '#ffffff' : '#d4d4d8' }}
               >
                 {player.name}
               </p>
               <p
                 className="font-display font-black"
-                style={{ color: isFirst ? '#f59e0b' : '#e4e4e7', fontSize: 'clamp(24px, 2.7vw, 54px)' }}
+                style={{ color: isFirst ? '#f59e0b' : '#e4e4e7', fontSize: 'clamp(32px, 3.4vw, 68px)' }}
               >
                 {player.score} pts
               </p>
@@ -456,7 +448,7 @@ function LeaderboardModal({ players }: { players: Player[] }) {
               <div
                 className="rounded-t-2xl flex items-center justify-center"
                 style={{
-                  width: '11.5vw',
+                  width: '14vw',
                   height: `${blockH}vh`,
                   backgroundColor: isFirst ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.03)',
                   border: `1px solid ${isFirst ? 'rgba(245,158,11,0.4)' : 'rgba(245,158,11,0.15)'}`,
@@ -464,7 +456,7 @@ function LeaderboardModal({ players }: { players: Player[] }) {
               >
                 <span
                   className="font-display font-black"
-                  style={{ color: rankColor(rank), fontSize: 'clamp(30px, 4vw, 80px)' }}
+                  style={{ color: rankColor(rank), fontSize: 'clamp(38px, 4.8vw, 96px)' }}
                 >
                   #{rank}
                 </span>
