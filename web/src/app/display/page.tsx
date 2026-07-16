@@ -720,12 +720,12 @@ function Segment1Screen({ gameState }: { gameState: GameState }) {
         <ResultGlow color={resultColor} />
 
         {/* Row 1: TRUTH / LIE word */}
-        <div className="flex items-center justify-center shrink-0 relative" style={{ padding: '2vw 5vw 1vw' }}>
+        <div className="flex items-center justify-center shrink-0 relative" style={{ padding: '1vw 5vw 0.2vw' }}>
           <p
             className="font-display font-black uppercase animate-reveal-pop leading-none"
             style={{
               color: resultColor,
-              fontSize: 'clamp(60px, 11vw, 180px)',
+              fontSize: 'clamp(56px, 10vw, 170px)',
               textShadow: `0 0 5vw ${isLie ? 'rgba(248,113,113,0.5)' : 'rgba(74,222,128,0.5)'}`,
             }}
           >
@@ -734,11 +734,11 @@ function Segment1Screen({ gameState }: { gameState: GameState }) {
         </div>
 
         {/* Row 2: Player photo + statement */}
-        <div className="flex-1 min-h-0 flex items-center relative" style={{ padding: '0 5vw 1.5vw', gap: '2vw' }}>
-          <div className="flex-1 min-w-0 flex flex-col" style={{ gap: '0.75vw' }}>
+        <div className="flex-1 min-h-0 overflow-hidden flex items-center relative" style={{ padding: '0 5vw 1vw', gap: '2vw' }}>
+          <div className="flex-1 min-w-0 flex flex-col" style={{ gap: '0.6vw' }}>
             <div className='flex items-center'>
-              <PlayerAvatar player={storyteller} vwSize={11} />
-              <p className="font-display font-bold text-white leading-none ml-4" style={{ fontSize: 'clamp(24px, 3vw, 60px)' }}>
+              <PlayerAvatar player={storyteller} vwSize={8.5} />
+              <p className="font-display font-bold text-white leading-none ml-4" style={{ fontSize: 'clamp(20px, 2.5vw, 50px)' }}>
                 {storyteller.name}
               </p>
             </div>
@@ -747,7 +747,7 @@ function Segment1Screen({ gameState }: { gameState: GameState }) {
         </div>
 
         {/* Row 3: Audience votes + Player votes side by side, no scroll */}
-        <div className="flex w-full shrink-0 overflow-hidden" style={{ borderTop: '1px solid rgba(245,158,11,0.12)', padding: '1.5vw 2vw', gap: '2vw' }}>
+        <div className="flex w-full shrink-0 overflow-hidden" style={{ borderTop: '1px solid rgba(245,158,11,0.12)', padding: '0.9vw 2vw', gap: '2vw' }}>
           {(gameState.showVoteBars ?? true) && (
             <div style={{ width: '60%' }}>
               <div className="flex items-baseline justify-between mb-2">
@@ -765,7 +765,7 @@ function Segment1Screen({ gameState }: { gameState: GameState }) {
             <p className="font-display uppercase tracking-widest mb-2" style={{ color: LABEL, fontSize: 'clamp(11px, 1.04vw, 20px)' }}>
               Player Votes
             </p>
-            <div className="w-full rounded-2xl p-3 flex flex-col flex-wrap gap-3 overflow-hidden" style={{ backgroundColor: '#0d0d0f', border: '1px solid rgba(245,158,11,0.2)' }}>
+            <div className="w-full rounded-2xl p-3 overflow-hidden" style={{ backgroundColor: '#0d0d0f', border: '1px solid rgba(245,158,11,0.2)', display: 'grid', gridTemplateColumns: n1 >= 5 ? '1fr 1fr' : '1fr', gap: '0.5vw 1.5vw', alignContent: 'center' }}>
               {nonStorytellers1.map((player) => {
                 const vote = segment1.playerVotes[player.id];
                 const voteColor = vote === 'TRUTH' ? '#4ade80' : vote === 'LIE' ? '#f87171' : '#3f3f46';
@@ -910,7 +910,7 @@ function Segment2Screen({ gameState }: { gameState: GameState }) {
         <ResultGlow color="#f87171" />
 
         {/* Row 1 (primary): Player photo + name + reveal */}
-        <div className="flex-1 min-h-0 flex items-center justify-between relative" style={{ padding: '2vw 5vw 1vw', gap: '1vw' }}>
+        <div className="flex-1 min-h-0 overflow-hidden flex items-center justify-between relative" style={{ padding: '2vw 5vw 1vw', gap: '1vw' }}>
           <div className='flex items-center justify-between'>
             <PlayerAvatar player={storyteller} vwSize={11.5} />
             <p className="font-display font-bold text-white leading-none ml-4" style={{ fontSize: 'clamp(26px, 3.2vw, 64px)' }}>
@@ -956,7 +956,7 @@ function Segment2Screen({ gameState }: { gameState: GameState }) {
             <p className="font-display uppercase tracking-widest mb-2" style={{ color: LABEL, fontSize: 'clamp(11px, 1.04vw, 20px)' }}>
               Player Votes
             </p>
-            <div className="w-full rounded-2xl p-3 flex flex-col gap-3 overflow-hidden" style={{ backgroundColor: '#0d0d0f', border: '1px solid rgba(245,158,11,0.2)' }}>
+            <div className="w-full rounded-2xl p-3 overflow-hidden" style={{ backgroundColor: '#0d0d0f', border: '1px solid rgba(245,158,11,0.2)', display: 'grid', gridTemplateColumns: n2 >= 5 ? '1fr 1fr' : '1fr', gap: '0.5vw 1.5vw', alignContent: 'center' }}>
               {nonStorytellers2.map((player) => {
                 const vote = segment2.playerVotes[player.id];
                 const STMT_PALETTE = ['#fbbf24', '#a78bfa', '#34d399', '#60a5fa', '#f472b6'];
