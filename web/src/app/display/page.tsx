@@ -602,12 +602,6 @@ function SetupScreen() {
       >
         Lie Hard
       </h1>
-      <p
-        className="font-display tracking-widest relative"
-        style={{ color: '#2d2d2d', fontSize: 'clamp(18px, 2.5vw, 48px)', marginTop: '0.42vw' }}
-      >
-        SEASON 2
-      </p>
       <div className="flex items-center relative" style={{ gap: '0.63vw', marginTop: '2.08vw' }}>
         <div className="rounded-full animate-breathe" style={{ width: '0.42vw', height: '0.42vw', backgroundColor: '#f09d0e' }} />
         <p style={{ color: '#f59e0b', fontSize: 'clamp(12px, 1.25vw, 24px)' }}>Setting up...</p>
@@ -1324,12 +1318,6 @@ export default function DisplayPage() {
             >
               Lie Hard
             </h1>
-            <p
-              className="font-display tracking-widest relative"
-              style={{ color: '#2d2d2d', fontSize: 'clamp(18px, 2.5vw, 48px)' }}
-            >
-              SEASON 2
-            </p>
           </div>
         );
       default: return <SetupScreen />;
