@@ -289,18 +289,18 @@ function Scoreboard({
       style={{
         backgroundColor: '#08080a',
         border: '1px solid rgba(245,158,11,0.35)',
-        borderRadius: '0.94vw',
-        boxShadow: '0 0.42vw 2.08vw rgba(0,0,0,0.6), 0 0 1.56vw rgba(245,159,11,0.28)',
+        borderRadius: '1.2vw',
+        boxShadow: '0 0.42vw 2.6vw rgba(0,0,0,0.7), 0 0 2vw rgba(245,159,11,0.32)',
       }}
     >
       {/* Label */}
       <div
         className="flex items-center"
-        style={{ padding: '0.83vw 1.67vw', borderRight: '1px solid rgba(245,158,11,0.2)' }}
+        style={{ padding: '1.1vw 2.2vw', borderRight: '1px solid rgba(245,158,11,0.2)' }}
       >
         <p
           className="font-display font-bold uppercase tracking-widest"
-          style={{ color: '#f59e0b', fontSize: 'clamp(11px, 1.04vw, 20px)' }}
+          style={{ color: '#f59e0b', fontSize: 'clamp(15px, 1.5vw, 32px)' }}
         >
           Points
         </p>
@@ -315,8 +315,8 @@ function Scoreboard({
             key={player.id}
             className="flex items-center transition-all duration-500 relative"
             style={{
-              gap: '0.63vw',
-              padding: '0.83vw 1.25vw',
+              gap: '0.9vw',
+              padding: '1.1vw 1.8vw',
               borderRight: isLast ? 'none' : '1px solid rgba(245,158,11,0.2)',
               backgroundColor: isHighlighted ? 'rgba(245,158,11,0.08)' : 'transparent',
             }}
@@ -332,21 +332,21 @@ function Scoreboard({
               alt={player.name}
               className="rounded-full object-cover shrink-0"
               style={{
-                width: '2.5vw',
-                height: '2.5vw',
+                width: '4.6vw',
+                height: '4.6vw',
                 border: `2px solid ${isHighlighted ? '#f59e0b' : 'rgba(245,158,11,0.2)'}`,
               }}
             />
             <div className="min-w-0">
               <p
                 className="text-white font-semibold truncate leading-tight"
-                style={{ fontSize: 'clamp(10px, 0.73vw, 14px)' }}
+                style={{ fontSize: 'clamp(15px, 1.4vw, 30px)' }}
               >
                 {player.name}
               </p>
               <p
                 className="font-display font-bold leading-tight transition-colors duration-500"
-                style={{ color: isHighlighted ? '#f59e0b' : '#e4e4e7', fontSize: 'clamp(12px, 1.25vw, 24px)' }}
+                style={{ color: isHighlighted ? '#f59e0b' : '#e4e4e7', fontSize: 'clamp(30px, 3.2vw, 66px)' }}
               >
                 {player.score}
               </p>
@@ -354,7 +354,7 @@ function Scoreboard({
             {isHighlighted && (
               <span
                 className="font-display font-black shrink-0"
-                style={{ color: '#f59e0b', marginLeft: '0.21vw', fontSize: 'clamp(10px, 0.83vw, 16px)' }}
+                style={{ color: '#f59e0b', marginLeft: '0.3vw', fontSize: 'clamp(16px, 1.4vw, 30px)' }}
               >
                 ▲
               </span>
