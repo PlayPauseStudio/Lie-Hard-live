@@ -168,7 +168,7 @@ function VoteBars({
       {!hideFooter && (
         <p
           className="text-right font-display"
-          style={{ color: '#3f3f46', fontSize: 'clamp(11px, 0.94vw, 18px)', paddingTop: '0.1vw' }}
+          style={{ color: '#3f3f46', fontSize: 'clamp(14px, 1.2vw, 24px)', paddingTop: '0.1vw' }}
         >
           {total} vote{total !== 1 ? 's' : ''}
         </p>
@@ -766,10 +766,10 @@ function Segment1Screen({ gameState }: { gameState: GameState }) {
           {(gameState.showVoteBars ?? true) && (
             <div style={{ width: '60%' }}>
               <div className="flex items-baseline justify-between mb-2">
-                <p className="font-display uppercase tracking-widest" style={{ color: LABEL, fontSize: 'clamp(11px, 1.04vw, 20px)' }}>
+                <p className="font-display uppercase tracking-widest" style={{ color: LABEL, fontSize: 'clamp(14px, 1.45vw, 28px)' }}>
                   Audience Votes
                 </p>
-                <p className="font-display" style={{ color: LABEL, fontSize: 'clamp(11px, 0.94vw, 18px)' }}>
+                <p className="font-display" style={{ color: LABEL, fontSize: 'clamp(14px, 1.2vw, 24px)' }}>
                   {totalVotes1} vote{totalVotes1 !== 1 ? 's' : ''}
                 </p>
               </div>
@@ -777,7 +777,7 @@ function Segment1Screen({ gameState }: { gameState: GameState }) {
             </div>
           )}
           <div style={{ width: (gameState.showVoteBars ?? true) ? '40%' : '100%' }}>
-            <p className="font-display uppercase tracking-widest mb-2" style={{ color: LABEL, fontSize: 'clamp(11px, 1.04vw, 20px)' }}>
+            <p className="font-display uppercase tracking-widest mb-2" style={{ color: LABEL, fontSize: 'clamp(14px, 1.45vw, 28px)' }}>
               Player Votes
             </p>
             <div className="w-full rounded-2xl p-3 overflow-hidden" style={{ backgroundColor: '#0d0d0f', border: '1px solid rgba(245,158,11,0.2)', display: 'grid', gridTemplateColumns: n1 >= 5 ? '1fr 1fr' : '1fr', gap: '0.5vw 1.5vw', alignContent: 'center' }}>
@@ -878,7 +878,7 @@ function Segment1Screen({ gameState }: { gameState: GameState }) {
               Audience Votes
             </p>
             {(gameState.showVoteBars ?? true) && (
-              <p className="font-display text-xl" style={{ color: LABEL}}>
+              <p className="font-display" style={{ color: LABEL, fontSize: 'clamp(14px, 1.2vw, 24px)'}}>
                 {Object.values(counts).reduce((a, b) => a + b, 0)} vote{Object.values(counts).reduce((a, b) => a + b, 0) !== 1 ? 's' : ''}
               </p>
             )}
@@ -957,10 +957,10 @@ function Segment2Screen({ gameState }: { gameState: GameState }) {
           {(gameState.showVoteBars ?? true) && (
             <div style={{ width: '60%' }}>
               <div className="flex items-baseline justify-between mb-2">
-                <p className="font-display uppercase tracking-widest" style={{ color: LABEL, fontSize: 'clamp(11px, 1.04vw, 20px)' }}>
+                <p className="font-display uppercase tracking-widest" style={{ color: LABEL, fontSize: 'clamp(14px, 1.45vw, 28px)' }}>
                   Audience Votes
                 </p>
-                <p className="font-display" style={{ color: LABEL, fontSize: 'clamp(11px, 0.94vw, 18px)' }}>
+                <p className="font-display" style={{ color: LABEL, fontSize: 'clamp(14px, 1.2vw, 24px)' }}>
                   {totalVotes2} vote{totalVotes2 !== 1 ? 's' : ''}
                 </p>
               </div>
@@ -968,7 +968,7 @@ function Segment2Screen({ gameState }: { gameState: GameState }) {
             </div>
           )}
           <div style={{ width: (gameState.showVoteBars ?? true) ? '40%' : '100%' }}>
-            <p className="font-display uppercase tracking-widest mb-2" style={{ color: LABEL, fontSize: 'clamp(11px, 1.04vw, 20px)' }}>
+            <p className="font-display uppercase tracking-widest mb-2" style={{ color: LABEL, fontSize: 'clamp(14px, 1.45vw, 28px)' }}>
               Player Votes
             </p>
             <div className="w-full rounded-2xl p-3 overflow-hidden" style={{ backgroundColor: '#0d0d0f', border: '1px solid rgba(245,158,11,0.2)', display: 'grid', gridTemplateColumns: n2 >= 5 ? '1fr 1fr' : '1fr', gap: '0.5vw 1.5vw', alignContent: 'center' }}>
@@ -1090,7 +1090,7 @@ function Segment2Screen({ gameState }: { gameState: GameState }) {
               Audience Votes
             </p>
             {(gameState.showVoteBars ?? true) && (
-              <p className="font-display" style={{ color: LABEL, fontSize: 'clamp(11px, 0.94vw, 18px)' }}>
+              <p className="font-display" style={{ color: LABEL, fontSize: 'clamp(14px, 1.2vw, 24px)' }}>
                 {Object.values(counts).reduce((a, b) => a + b, 0)} vote{Object.values(counts).reduce((a, b) => a + b, 0) !== 1 ? 's' : ''}
               </p>
             )}
