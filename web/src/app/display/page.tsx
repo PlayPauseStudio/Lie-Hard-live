@@ -746,8 +746,8 @@ function Segment1Screen({ gameState }: { gameState: GameState }) {
           </div>
         </div>
 
-        {/* Row 3: Audience votes + Player votes side by side, no scroll */}
-        <div className="flex w-full shrink-0 overflow-hidden" style={{ borderTop: '1px solid rgba(245,158,11,0.12)', padding: '0.9vw 2vw', gap: '2vw' }}>
+        {/* Row 3: Player votes (left) + Audience votes (right) — order matches the voting screen */}
+        <div className="flex flex-row-reverse w-full shrink-0 overflow-hidden" style={{ borderTop: '1px solid rgba(245,158,11,0.12)', padding: '0.9vw 2vw', gap: '2vw' }}>
           {(gameState.showVoteBars ?? true) && (
             <div style={{ width: '60%' }}>
               <div className="flex items-baseline justify-between mb-2">
@@ -937,8 +937,8 @@ function Segment2Screen({ gameState }: { gameState: GameState }) {
           ))}
         </div>
 
-        {/* Row 3: Audience votes + Player votes side by side, no scroll */}
-        <div className="flex w-full shrink-0 overflow-hidden" style={{ borderTop: '1px solid rgba(245,158,11,0.12)', padding: '1.5vw 2vw', gap: '2vw' }}>
+        {/* Row 3: Player votes (left) + Audience votes (right) — order matches the voting screen */}
+        <div className="flex flex-row-reverse w-full shrink-0 overflow-hidden" style={{ borderTop: '1px solid rgba(245,158,11,0.12)', padding: '1.5vw 2vw', gap: '2vw' }}>
           {(gameState.showVoteBars ?? true) && (
             <div style={{ width: '60%' }}>
               <div className="flex items-baseline justify-between mb-2">
