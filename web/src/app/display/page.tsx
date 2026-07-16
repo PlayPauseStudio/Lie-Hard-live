@@ -1998,6 +1998,13 @@ export default function DisplayPage() {
     }
   })();
 
+  // Status-driven styling for the voting pill (matches the scoreboard's card language).
+  const voteStyle = {
+    open:   { color: "#4ade80", label: "Open",   bg: "rgba(20,60,33,0.35)", border: "rgba(74,222,128,0.55)", glow: "0 0 2.2vw rgba(74,222,128,0.28), 0 0.42vw 2.6vw rgba(0,0,0,0.55)" },
+    closed: { color: "#a1a1aa", label: "Closed", bg: "rgba(28,28,32,0.65)", border: "rgba(113,113,122,0.5)",  glow: "0 0.42vw 2.6vw rgba(0,0,0,0.55)" },
+    locked: { color: "#f59e0b", label: "Locked", bg: "rgba(61,40,4,0.35)",  border: "rgba(245,158,11,0.5)",   glow: "0 0 2.2vw rgba(245,158,11,0.22), 0 0.42vw 2.6vw rgba(0,0,0,0.55)" },
+  }[votingStatus];
+
   return (
     <div
       className="text-white relative flex flex-col"
@@ -2041,46 +2048,39 @@ export default function DisplayPage() {
           <div />
 
           <div
-            className="flex items-center rounded-full"
+            className="flex items-center"
             style={{
-              gap: "1vw",
-              padding: "2.3vw 2.2vw",
-              backgroundColor: "#08080a",
-              border: `1px solid ${votingStatus === "open" ? "#166534" : votingStatus === "closed" ? "#27272a" : "rgba(245,158,11,0.25)"}`,
-              boxShadow: "0 0.42vw 2.6vw rgba(0,0,0,0.6)",
+              gap: "1.1vw",
+              padding: "1.5vw 2vw",
+              backgroundColor: voteStyle.bg,
+              border: `2px solid ${voteStyle.border}`,
+              borderRadius: "1.2vw",
+              boxShadow: voteStyle.glow,
             }}
           >
             <span
               className={`rounded-full shrink-0 ${votingStatus === "open" ? "animate-pulse" : ""}`}
               style={{
-                width: "1.1vw",
-                height: "1.1vw",
-                backgroundColor:
-                  votingStatus === "open"
-                    ? "#4ade80"
-                    : votingStatus === "closed"
-                      ? "#52525b"
-                      : "#f59e0b",
+                width: "1.3vw",
+                height: "1.3vw",
+                backgroundColor: voteStyle.color,
+                boxShadow: `0 0 1vw ${voteStyle.color}`,
               }}
             />
-            <span
-              className="font-mono font-bold uppercase tracking-widest"
-              style={{
-                color:
-                  votingStatus === "open"
-                    ? "#4ade80"
-                    : votingStatus === "closed"
-                      ? "#52525b"
-                      : "#f59e0b",
-                fontSize: "clamp(18px, 2.2vw, 46px)",
-              }}
-            >
-              {votingStatus === "open"
-                ? "Voting Open"
-                : votingStatus === "closed"
-                  ? "Voting Closed"
-                  : "Voting Locked"}
-            </span>
+            <div className="flex flex-col" style={{ gap: "0.1vw" }}>
+              <span
+                className="font-display font-bold uppercase tracking-widest leading-none"
+                style={{ color: "#71717a", fontSize: "clamp(11px, 1vw, 20px)" }}
+              >
+                Voting
+              </span>
+              <span
+                className="font-display font-black uppercase leading-none"
+                style={{ color: voteStyle.color, fontSize: "clamp(22px, 2.7vw, 56px)" }}
+              >
+                {voteStyle.label}
+              </span>
+            </div>
           </div>
         </div>
       )}
