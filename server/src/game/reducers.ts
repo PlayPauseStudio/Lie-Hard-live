@@ -1,6 +1,6 @@
 import type { GameState, Player, Phase, WarmupStatement, Segment1Statement, Segment2Statement } from './state';
-import { initialGameState, SEG3_POINTS } from './state';
-import { awardVoterScores, computeSegmentAward } from './scoring';
+import { initialGameState, SEG1_POINTS, SEG2_POINTS, SEG3_POINTS } from './state';
+import { answerSwapDelta, awardVoterScores, computeSegmentAward, voterScoreSwap } from './scoring';
 
 /**
  * Each reducer is a pure function of (state, payload) that returns the changed
@@ -163,14 +163,27 @@ export function editSeg1Statement(
   statement: string,
   isLie: boolean,
 ): Patch {
-  return {
+  const s = state.segment1;
+  const prev = s.statements.find((x) => x.playerId === playerId);
+  const patch: Patch = {
     segment1: {
-      ...state.segment1,
-      statements: state.segment1.statements.map((s) =>
-        s.playerId === playerId ? { ...s, statement, isLie } : s,
-      ),
+      ...s,
+      statements: s.statements.map((x) => (x.playerId === playerId ? { ...x, statement, isLie } : x)),
     },
   };
+  // If the answer changed on an already-revealed/awarded round, re-score it.
+  if (prev && prev.isLie !== isLie) {
+    const oldChoice = prev.isLie ? 'LIE' : 'TRUTH';
+    const newChoice = isLie ? 'LIE' : 'TRUTH';
+    if (s.showResult || s.completedStorytellers.includes(playerId)) {
+      patch.voterScores = voterScoreSwap(state, `seg1-${playerId}`, oldChoice, newChoice);
+    }
+    if (s.completedStorytellers.includes(playerId)) {
+      const delta = answerSwapDelta(state.players, playerId, s.playerVotes, oldChoice, newChoice, SEG1_POINTS);
+      patch.players = state.players.map((p) => ({ ...p, score: p.score + (delta[p.id] ?? 0) }));
+    }
+  }
+  return patch;
 }
 
 export function editSeg2Statement(
@@ -179,16 +192,29 @@ export function editSeg2Statement(
   statements: string[],
   lieIndex: number,
 ): Patch {
+  const s = state.segment2;
+  const prev = s.statements.find((x) => x.playerId === playerId);
   // Clamp the lie index into the (possibly resized) statements array.
   const safeLie = Math.max(0, Math.min(lieIndex, statements.length - 1));
-  return {
+  const patch: Patch = {
     segment2: {
-      ...state.segment2,
-      statements: state.segment2.statements.map((s) =>
-        s.playerId === playerId ? { ...s, statements, lieIndex: safeLie } : s,
-      ),
+      ...s,
+      statements: s.statements.map((x) => (x.playerId === playerId ? { ...x, statements, lieIndex: safeLie } : x)),
     },
   };
+  // If the lie moved on an already-revealed/awarded round, re-score it.
+  if (prev && prev.lieIndex !== safeLie) {
+    const oldChoice = `STATEMENT_${prev.lieIndex}`;
+    const newChoice = `STATEMENT_${safeLie}`;
+    if (s.showResult || s.completedStorytellers.includes(playerId)) {
+      patch.voterScores = voterScoreSwap(state, `seg2-${playerId}`, oldChoice, newChoice);
+    }
+    if (s.completedStorytellers.includes(playerId)) {
+      const delta = answerSwapDelta(state.players, playerId, s.playerVotes, oldChoice, newChoice, SEG2_POINTS);
+      patch.players = state.players.map((p) => ({ ...p, score: p.score + (delta[p.id] ?? 0) }));
+    }
+  }
+  return patch;
 }
 
 export function editSeg3Object(
@@ -213,10 +239,10 @@ export function awardSegment(state: GameState, segment: SegmentKey): Patch {
       completedStorytellers: [...seg.completedStorytellers, seg.currentStorytellerId].filter(
         (x): x is number => x != null,
       ),
-      currentStorytellerId: null,
-      showResult: false,
+      // Keep currentStorytellerId, playerVotes and showResult so the operator can
+      // still edit this round's answer and have the scores auto-re-award. showResult
+      // stays true so the reveal can't be re-fired (which would double-tally voters).
       audienceVotingOpen: false,
-      playerVotes: emptyPlayerVotes(state.players),
     },
     scorePopupDeltas: deltas,
     showScorePopup: false,

@@ -1,4 +1,4 @@
-import type { GameState, VoterScore } from './state';
+import type { GameState, Player, VoterScore } from './state';
 import { SEG1_POINTS, SEG2_POINTS } from './state';
 
 /**
@@ -73,4 +73,57 @@ export function computeSegmentAward(gs: GameState, segNum: 1 | 2): SegmentAward 
     .map((p) => ({ name: p.name, delta: totals[p.id] }));
 
   return { totals, deltas };
+}
+
+/**
+ * Per-player score delta to apply when a seg1/seg2 answer changes from
+ * `oldChoice` to `newChoice`, given the player votes that were used to award the
+ * round. Reverses the old award and reapplies the new one in a single pass:
+ * a voter who was correct and is now wrong loses `points` (which shift to the
+ * storyteller), and vice-versa. Returns 0s when the answer is unchanged.
+ */
+export function answerSwapDelta(
+  players: Player[],
+  storytellerId: number,
+  votes: Record<number, string | null>,
+  oldChoice: string,
+  newChoice: string,
+  points: number,
+): Record<number, number> {
+  const delta: Record<number, number> = Object.fromEntries(players.map((p) => [p.id, 0]));
+  if (oldChoice === newChoice) return delta;
+  for (const p of players) {
+    if (p.id === storytellerId) continue;
+    const vote = votes[p.id];
+    if (!vote) continue;
+    // Voter earned `points` iff they voted the correct answer.
+    delta[p.id] += (vote === newChoice ? points : 0) - (vote === oldChoice ? points : 0);
+    // Storyteller earned `points` for each voter who was wrong.
+    delta[storytellerId] += (vote !== newChoice ? points : 0) - (vote !== oldChoice ? points : 0);
+  }
+  return delta;
+}
+
+/**
+ * Re-tally the audience voterScores for one round when its correct answer
+ * changes from `oldChoice` to `newChoice`: uids who voted the new answer gain a
+ * correct, uids who voted the old answer lose one (never below zero). Audience
+ * votes for a revealed round are frozen, so this is an exact reversal+reapply.
+ */
+export function voterScoreSwap(
+  gs: GameState,
+  votingRound: string,
+  oldChoice: string,
+  newChoice: string,
+): { [uid: string]: VoterScore } {
+  if (oldChoice === newChoice) return gs.voterScores;
+  const next: { [uid: string]: VoterScore } = { ...gs.voterScores };
+  for (const [uid, v] of Object.entries(gs.audienceVotes)) {
+    if (v.votingRound !== votingRound) continue;
+    const d = (v.choice === newChoice ? 1 : 0) - (v.choice === oldChoice ? 1 : 0);
+    if (d === 0) continue;
+    const cur = next[uid]?.correctCount ?? 0;
+    next[uid] = { name: v.displayName ?? uid, correctCount: Math.max(0, cur + d) };
+  }
+  return next;
 }
