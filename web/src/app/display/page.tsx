@@ -595,140 +595,105 @@ function TopVotersOverlay({
   voterScores: GameState["voterScores"];
 }) {
   const sorted = Object.entries(voterScores ?? {})
-    .sort(([, a], [, b]) => b.correctCount - a.correctCount)
+    .map(([uid, data]) => ({ uid, name: data.name, count: data.correctCount }))
+    .sort((a, b) => b.count - a.count)
     .slice(0, 3);
 
-  // Gold / silver / bronze — designed discs, not emoji (emoji render badly on TVs).
-  const medal = ["#fbbf24", "#cbd5e1", "#d98c3f"];
-  const medalLight = ["#fde68a", "#f8fafc", "#f2b280"];
+  const medal: Record<number, string> = { 1: "#fbbf24", 2: "#cbd5e1", 3: "#d98c3f" };
+  const medalLight: Record<number, string> = { 1: "#fde68a", 2: "#f8fafc", 3: "#f2b280" };
+  // Podium order: 2nd, 1st, 3rd (1st centered & tallest), matching the leaderboard.
+  const podium =
+    sorted.length >= 3 ? [sorted[1], sorted[0], sorted[2]] : sorted.length === 2 ? [sorted[1], sorted[0]] : sorted;
+  const podiumRank = sorted.length >= 3 ? [2, 1, 3] : sorted.length === 2 ? [2, 1] : [1];
+  const blockVh = sorted.length >= 3 ? [7, 11, 5] : sorted.length === 2 ? [7, 11] : [11];
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 z-30 animate-slide-up-bar">
-      {/* Bright accent line riding the top edge of the bar */}
+    <div
+      className="absolute z-30 animate-fade-in"
+      style={{ top: "clamp(12px, 1.5vw, 32px)", right: "clamp(12px, 1.5vw, 32px)" }}
+    >
       <div
+        className="rounded-2xl"
         style={{
-          height: "0.3vw",
-          background: "linear-gradient(90deg, #d97706, #fbbf24, #d97706)",
-        }}
-      />
-      <div
-        className="flex items-stretch"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(10,10,12,0.94), rgba(6,6,8,0.99))",
-          boxShadow: "0 -0.6vw 2.5vw rgba(0,0,0,0.55)",
+          backgroundColor: "rgba(10,10,12,0.94)",
+          border: "2px solid rgba(245,158,11,0.4)",
+          boxShadow: "0 0.5vw 2.5vw rgba(0,0,0,0.55), 0 0 2vw rgba(245,158,11,0.12)",
+          padding: "clamp(10px,1.2vw,24px) clamp(16px,1.9vw,38px) clamp(8px,1vw,20px)",
         }}
       >
-        {/* Brand block */}
-        <div
-          className="flex flex-col justify-center shrink-0"
+        <p
+          className="font-display font-black uppercase text-center"
           style={{
-            background: "linear-gradient(160deg, #fbbf24, #d97706)",
-            padding: "clamp(10px, 1.1vw, 26px) clamp(18px, 2vw, 46px)",
+            color: "#f59e0b",
+            fontSize: "clamp(13px,1.4vw,28px)",
+            letterSpacing: "0.05em",
+            marginBottom: "clamp(8px,0.9vw,18px)",
           }}
         >
-          <span
-            className="font-display font-black uppercase leading-none"
-            style={{
-              color: "#1a1204",
-              fontSize: "clamp(18px, 2vw, 42px)",
-              letterSpacing: "0.02em",
-            }}
-          >
-            Top
-          </span>
-          <span
-            className="font-display font-black uppercase leading-none"
-            style={{
-              color: "#1a1204",
-              fontSize: "clamp(18px, 2vw, 42px)",
-              letterSpacing: "0.02em",
-            }}
-          >
-            Voters
-          </span>
-        </div>
-
-        {/* Ranked entries, spread across the bar */}
-        <div
-          className="flex-1 flex items-center justify-around"
-          style={{ padding: "clamp(8px, 1vw, 24px) clamp(12px, 2vw, 48px)" }}
-        >
-          {sorted.length === 0 ? (
-            <span
-              className="font-display uppercase tracking-widest"
-              style={{ color: "#52525b", fontSize: "clamp(12px, 1.2vw, 24px)" }}
-            >
-              No votes yet
-            </span>
-          ) : (
-            sorted.map(([uid, data], rank) => {
-              const first = rank === 0;
-              const disc = first
-                ? "clamp(36px, 3.6vw, 76px)"
-                : "clamp(30px, 2.9vw, 60px)";
+          Top Voters
+        </p>
+        {sorted.length === 0 ? (
+          <p className="text-center" style={{ color: "#3f3f46", fontSize: "clamp(11px,1vw,20px)" }}>
+            No votes yet
+          </p>
+        ) : (
+          <div className="flex items-end justify-center" style={{ gap: "clamp(6px,0.7vw,14px)" }}>
+            {podium.map((v, i) => {
+              const rank = podiumRank[i];
+              const isFirst = rank === 1;
+              const discSz = isFirst ? "clamp(34px,3.4vw,68px)" : "clamp(28px,2.8vw,56px)";
               return (
-                <div
-                  key={uid}
-                  className="flex items-center shrink-0"
-                  style={{ gap: "clamp(8px, 0.9vw, 20px)" }}
-                >
-                  {/* Rank disc */}
+                <div key={v.uid} className="flex flex-col items-center" style={{ gap: "0.4vw" }}>
                   <div
-                    className="shrink-0 flex items-center justify-center"
+                    className="rounded-full flex items-center justify-center shrink-0"
                     style={{
-                      width: disc,
-                      height: disc,
-                      borderRadius: "9999px",
+                      width: discSz,
+                      height: discSz,
                       background: `radial-gradient(circle at 34% 28%, ${medalLight[rank]}, ${medal[rank]})`,
-                      boxShadow: `0 0 1.2vw ${medal[rank]}55, inset 0 0 0 2px rgba(255,255,255,0.35)`,
+                      boxShadow: `0 0 0.8vw ${medal[rank]}66, inset 0 0 0 2px rgba(255,255,255,0.35)`,
                     }}
                   >
                     <span
                       className="font-display font-black"
-                      style={{
-                        color: "#1a1204",
-                        fontSize: first
-                          ? "clamp(18px, 1.9vw, 40px)"
-                          : "clamp(15px, 1.5vw, 32px)",
-                      }}
+                      style={{ color: "#1a1204", fontSize: isFirst ? "clamp(16px,1.6vw,32px)" : "clamp(13px,1.3vw,26px)" }}
                     >
-                      {rank + 1}
+                      {rank}
                     </span>
                   </div>
-                  {/* Name */}
-                  <span
-                    className="font-display font-bold text-white truncate"
+                  <p
+                    className="font-display font-bold text-center truncate"
                     style={{
-                      maxWidth: "clamp(110px, 13vw, 320px)",
-                      fontSize: first
-                        ? "clamp(18px, 1.95vw, 42px)"
-                        : "clamp(16px, 1.6vw, 34px)",
+                      maxWidth: "clamp(70px,7vw,150px)",
+                      color: isFirst ? "#ffffff" : "#d4d4d8",
+                      fontSize: isFirst ? "clamp(14px,1.4vw,28px)" : "clamp(12px,1.2vw,24px)",
                     }}
                   >
-                    {data.name}
-                  </span>
-                  {/* Count */}
-                  <span
-                    className="font-display font-black shrink-0"
+                    {v.name}
+                  </p>
+                  <p
+                    className="font-display font-black"
+                    style={{ color: isFirst ? "#f59e0b" : "#e4e4e7", fontSize: isFirst ? "clamp(16px,1.7vw,34px)" : "clamp(14px,1.4vw,28px)" }}
+                  >
+                    {v.count} ✓
+                  </p>
+                  <div
+                    className="rounded-t-lg flex items-center justify-center"
                     style={{
-                      color: medal[rank],
-                      fontSize: first
-                        ? "clamp(20px, 2.1vw, 46px)"
-                        : "clamp(18px, 1.8vw, 38px)",
-                      fontVariantNumeric: "tabular-nums",
+                      width: "clamp(50px,5vw,100px)",
+                      height: `${blockVh[i]}vh`,
+                      backgroundColor: isFirst ? "rgba(245,158,11,0.12)" : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${isFirst ? "rgba(245,158,11,0.4)" : "rgba(245,158,11,0.15)"}`,
                     }}
                   >
-                    {data.correctCount}
-                    <span style={{ fontSize: "0.62em", marginLeft: "0.12em" }}>
-                      ✓
+                    <span className="font-display font-black" style={{ color: medal[rank], fontSize: "clamp(20px,2.2vw,44px)" }}>
+                      #{rank}
                     </span>
-                  </span>
+                  </div>
                 </div>
               );
-            })
-          )}
-        </div>
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1304,7 +1269,7 @@ function Segment2Screen({ gameState }: { gameState: GameState }) {
   const hasAnyVote2 = nonStorytellers2.some((p) => segment2.playerVotes[p.id]);
   // Player-vote avatars/text shrink as the player count grows so 5+ players fit.
   const n2 = nonStorytellers2.length;
-  const pv2 = n2 <= 2 ? 6.5 : n2 === 3 ? 5 : n2 === 4 ? 4.2 : 3.5;
+  const pv2 = n2 <= 2 ? 6 : n2 === 3 ? 4 : n2 === 4 ? 3.4 : 2.9;
   const pvName2 =
     n2 <= 3 ? "clamp(16px, 1.7vw, 34px)" : "clamp(13px, 1.3vw, 26px)";
   const pvVote2 =
@@ -1496,10 +1461,10 @@ function Segment2Screen({ gameState }: { gameState: GameState }) {
           className="flex items-center"
           style={{ gap: "1.67vw", marginBottom: "0.83vw" }}
         >
-          <PlayerAvatar player={storyteller} vwSize={9.5} />
+          <PlayerAvatar player={storyteller} vwSize={7.5} />
           <p
             className="font-display font-bold text-white leading-none"
-            style={{ fontSize: "clamp(18px, 2.71vw, 52px)" }}
+            style={{ fontSize: "clamp(18px, 2.4vw, 46px)" }}
           >
             {storyteller.name}
           </p>
@@ -1552,13 +1517,13 @@ function Segment2Screen({ gameState }: { gameState: GameState }) {
           </p>
           {hasAnyVote2 ? (
             <div
-              className="w-full rounded-2xl p-6"
+              className="w-full rounded-2xl p-4 overflow-hidden"
               style={{
                 backgroundColor: "#0d0d0f",
                 border: "1px solid rgba(245,158,11,0.25)",
                 display: "flex",
                 flexDirection: "column",
-                gap: n2 <= 3 ? "1.5vw" : "0.9vw",
+                gap: n2 <= 3 ? "1vw" : "0.6vw",
               }}
             >
               {nonStorytellers2.map((player) => {

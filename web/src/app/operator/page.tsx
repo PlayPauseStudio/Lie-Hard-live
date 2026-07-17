@@ -275,6 +275,21 @@ export default function OperatorPage() {
     setEditSeg2(false);
   }, [gameState?.segment2?.currentStorytellerId]);
 
+  // Keep the points breakdown in sync if the answer is edited after the reveal.
+  useEffect(() => {
+    if (gameState?.phase === 'SEGMENT1' && gameState.segment1.showResult && seg1Preview && !seg1Awarded) {
+      calcSeg1Points();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState?.segment1?.statements]);
+
+  useEffect(() => {
+    if (gameState?.phase === 'SEGMENT2' && gameState.segment2.showResult && seg2Preview && !seg2Awarded) {
+      calcSeg2Points();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState?.segment2?.statements]);
+
   // Compute local display seconds from Firestore timer state
   useEffect(() => {
     const bt = gameState?.banterTimer;

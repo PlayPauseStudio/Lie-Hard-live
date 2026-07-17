@@ -24,7 +24,7 @@ interface GameState {
   phase: 'SETUP' | 'WARMUP' | 'SEGMENT1' | 'SEGMENT2' | 'SEGMENT3' | 'FINAL';
   players: Player[];
   warmup: { statements: WarmupStatement[]; currentIndex: number; audienceVotingOpen: boolean; showResult: boolean; };
-  segment1: { statements: Segment1Statement[]; currentStorytellerId: number | null; audienceVotingOpen: boolean; showResult: boolean; };
+  segment1: { statements: Segment1Statement[]; currentStorytellerId: number | null; audienceVotingOpen: boolean; showResult: boolean; statementShown?: boolean; };
   segment2: { statements: Segment2Statement[]; currentStorytellerId: number | null; audienceVotingOpen: boolean; showResult: boolean; revealedStatements: number[]; };
   segment3: { photoUrl: string | null; photoTitle: string | null; audienceVotingOpen: boolean; showResult: boolean; winnerId: number | null; };
 }
@@ -518,7 +518,11 @@ export default function AudiencePage() {
           {stmtObj && (
             <>
               <p className="text-orange-400 text-2xl font-bold text-center mb-4">{storytellerName}</p>
-              <p className="text-white text-xl text-center px-2 mb-8 leading-relaxed">{stmtObj.statement}</p>
+              {segment1.statementShown ? (
+                <p className="text-white text-xl text-center px-2 mb-8 leading-relaxed">{stmtObj.statement}</p>
+              ) : (
+                <p className="text-gray-600 text-center text-base mb-8">Listen to the statement, then vote.</p>
+              )}
             </>
           )}
           {showButtons ? (

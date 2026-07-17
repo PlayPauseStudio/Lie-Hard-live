@@ -23,6 +23,7 @@ export interface AudienceGameState {
     currentStorytellerId: number | null;
     audienceVotingOpen: boolean;
     showResult: boolean;
+    statementShown: boolean;
   };
   segment2: {
     statements: { playerId: number; playerName: string; statements: string[] }[];
@@ -57,6 +58,7 @@ export function audienceView(gs: GameState): AudienceGameState {
       currentStorytellerId: gs.segment1.currentStorytellerId,
       audienceVotingOpen: gs.segment1.audienceVotingOpen,
       showResult: gs.segment1.showResult,
+      statementShown: gs.segment1.statementShown ?? false,
     },
     segment2: {
       statements: gs.segment2.statements.map((s) => ({
