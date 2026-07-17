@@ -74,6 +74,8 @@ export interface GameState {
     audienceVotingOpen: boolean;
     showResult: boolean;
     completedStorytellers: number[];
+    // Operator toggles whether the statement text is on the display during voting.
+    statementShown: boolean;
   };
   segment2: {
     statements: Segment2Statement[];
@@ -127,6 +129,7 @@ export function initialGameState(): GameState {
       audienceVotingOpen: false,
       showResult: false,
       completedStorytellers: [],
+      statementShown: false,
     },
     segment2: {
       statements: [],

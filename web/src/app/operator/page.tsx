@@ -62,6 +62,7 @@ interface GameState {
     audienceVotingOpen: boolean;
     showResult: boolean;
     completedStorytellers: number[];
+    statementShown?: boolean;
   };
   segment2: {
     statements: Segment2Statement[];
@@ -1142,12 +1143,24 @@ export default function OperatorPage() {
                 <div className="flex items-center justify-between mb-3">
                   <p className="font-mono text-xs uppercase tracking-widest" style={{ color: '#52525b' }}>STATEMENT</p>
                   {!editSeg1 && (
-                    <button
-                      onClick={() => { setSeg1Draft({ statement: stmtObj.statement, isLie: stmtObj.isLie }); setEditSeg1(true); }}
-                      className="font-mono text-xs font-bold px-2 py-1 rounded transition-colors"
-                      style={{ backgroundColor: '#1a1a1a', color: '#f59e0b', border: '1px solid #78350f' }}>
-                      ✎ EDIT
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => send(OP.TOGGLE_SEG1_STATEMENT)}
+                        className="font-mono text-xs font-bold px-2 py-1 rounded transition-colors"
+                        style={{
+                          backgroundColor: segment1.statementShown ? '#052e16' : '#1a1a1a',
+                          color: segment1.statementShown ? '#4ade80' : '#71717a',
+                          border: `1px solid ${segment1.statementShown ? '#166534' : '#3f3f46'}`,
+                        }}>
+                        {segment1.statementShown ? 'SHOWN' : 'SHOW'}
+                      </button>
+                      <button
+                        onClick={() => { setSeg1Draft({ statement: stmtObj.statement, isLie: stmtObj.isLie }); setEditSeg1(true); }}
+                        className="font-mono text-xs font-bold px-2 py-1 rounded transition-colors"
+                        style={{ backgroundColor: '#1a1a1a', color: '#f59e0b', border: '1px solid #78350f' }}>
+                        ✎ EDIT
+                      </button>
+                    </div>
                   )}
                 </div>
                 {!editSeg1 ? (

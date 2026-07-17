@@ -60,6 +60,7 @@ interface GameState {
     audienceVotingOpen: boolean;
     showResult: boolean;
     completedStorytellers: number[];
+    statementShown?: boolean;
   };
   segment2: {
     statements: Segment2Statement[];
@@ -1137,7 +1138,18 @@ function Segment1Screen({ gameState }: { gameState: GameState }) {
             {storyteller.name}
           </p>
         </div>
-        <StatementCard text={stmtObj.statement} />
+        {segment1.statementShown ? (
+          <StatementCard text={stmtObj.statement} />
+        ) : (
+          <div
+            className="w-full rounded-2xl flex items-center justify-center"
+            style={{ backgroundColor: "#0d0d0f", border: "1px dashed rgba(245,158,11,0.2)", padding: "clamp(20px, 3vw, 60px)" }}
+          >
+            <p className="font-display uppercase tracking-widest" style={{ color: "#3f3f46", fontSize: "clamp(12px, 1.4vw, 28px)" }}>
+              Statement hidden
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Row 2: player votes + audience votes */}

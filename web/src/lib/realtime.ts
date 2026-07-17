@@ -23,6 +23,7 @@ export const OP = {
   SELECT_STORYTELLER: 'op:selectStoryteller',
   SET_PLAYER_VOTE: 'op:setPlayerVote',
   TOGGLE_STATEMENT: 'op:toggleStatement',
+  TOGGLE_SEG1_STATEMENT: 'op:toggleSeg1Statement',
   EDIT_SEG1: 'op:editSeg1',
   EDIT_SEG2: 'op:editSeg2',
   EDIT_SEG3: 'op:editSeg3',

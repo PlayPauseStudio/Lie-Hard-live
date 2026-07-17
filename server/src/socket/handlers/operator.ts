@@ -75,6 +75,8 @@ export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): vo
     apply(R.toggleStatement(store.getState(), d.index)),
   );
 
+  on(OP.TOGGLE_SEG1_STATEMENT, empty, () => apply(R.toggleSeg1Statement(store.getState())));
+
   on(OP.EDIT_SEG1, S.editSeg1Schema, (d) =>
     apply(R.editSeg1Statement(store.getState(), d.playerId, d.statement, d.isLie)),
   );

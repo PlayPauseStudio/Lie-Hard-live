@@ -125,6 +125,7 @@ export function selectStoryteller(state: GameState, segment: SegmentKey, playerI
         playerVotes,
         audienceVotingOpen: false,
         showResult: false,
+        statementShown: false,
       },
     };
   }
@@ -147,7 +148,11 @@ export function setPlayerVote(state: GameState, segment: SegmentKey, playerId: n
   return { [segment]: { ...seg, playerVotes: { ...seg.playerVotes, [playerId]: vote } } } as Patch;
 }
 
-// ── Seg2 statement reveal toggle ─────────────────────────────────────────────
+// ── Statement reveal toggles (show the statement text on the display) ─────────
+
+export function toggleSeg1Statement(state: GameState): Patch {
+  return { segment1: { ...state.segment1, statementShown: !state.segment1.statementShown } };
+}
 
 export function toggleStatement(state: GameState, index: number): Patch {
   const revealed = state.segment2.revealedStatements ?? [];
