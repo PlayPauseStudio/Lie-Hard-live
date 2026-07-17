@@ -2029,40 +2029,68 @@ export default function DisplayPage() {
           {/* scoreboard floats separately (below) so it doesn't take layout space */}
           <div />
 
-          <div
-            className="flex items-center"
-            style={{
-              gap: "1.1vw",
-              padding: "1.5vw 2vw",
-              backgroundColor: voteStyle.bg,
-              border: `2px solid ${voteStyle.border}`,
-              borderRadius: "1.2vw",
-              boxShadow: voteStyle.glow,
-            }}
-          >
-            <span
-              className={`rounded-full shrink-0 ${votingStatus === "open" ? "animate-pulse" : ""}`}
+          <div className="relative">
+            <div
+              className="flex items-center"
               style={{
-                width: "1.3vw",
-                height: "1.3vw",
-                backgroundColor: voteStyle.color,
-                boxShadow: `0 0 1vw ${voteStyle.color}`,
+                gap: "1.1vw",
+                padding: "1.5vw 2vw",
+                backgroundColor: voteStyle.bg,
+                border: `2px solid ${voteStyle.border}`,
+                borderRadius: "1.2vw",
+                boxShadow: voteStyle.glow,
               }}
-            />
-            <div className="flex flex-col" style={{ gap: "0.1vw" }}>
+            >
               <span
-                className="font-display font-bold uppercase tracking-widest leading-none"
-                style={{ color: "#71717a", fontSize: "clamp(11px, 1vw, 20px)" }}
-              >
-                Voting
-              </span>
-              <span
-                className="font-display font-black uppercase leading-none"
-                style={{ color: voteStyle.color, fontSize: "clamp(22px, 2.7vw, 56px)" }}
-              >
-                {voteStyle.label}
-              </span>
+                className={`rounded-full shrink-0 ${votingStatus === "open" ? "animate-pulse" : ""}`}
+                style={{
+                  width: "1.3vw",
+                  height: "1.3vw",
+                  backgroundColor: voteStyle.color,
+                  boxShadow: `0 0 1vw ${voteStyle.color}`,
+                }}
+              />
+              <div className="flex flex-col" style={{ gap: "0.1vw" }}>
+                <span
+                  className="font-display font-bold uppercase tracking-widest leading-none"
+                  style={{ color: "#71717a", fontSize: "clamp(11px, 1vw, 20px)" }}
+                >
+                  Voting
+                </span>
+                <span
+                  className="font-display font-black uppercase leading-none"
+                  style={{ color: voteStyle.color, fontSize: "clamp(22px, 2.7vw, 56px)" }}
+                >
+                  {voteStyle.label}
+                </span>
+              </div>
             </div>
+            {/* Banter timer — sits directly below the voting status pill */}
+            {isTimerRunning && (
+              <div className="absolute animate-fade-in" style={{ top: "calc(100% + 0.6vw)", left: 0, right: 0 }}>
+                <div
+                  className="flex items-center justify-center"
+                  style={{
+                    padding: "0.5vw 1.2vw",
+                    borderRadius: "1vw",
+                    backgroundColor: timerUrgent ? "rgba(25,4,4,0.96)" : "rgba(8,8,10,0.96)",
+                    border: `2px solid ${timerUrgent ? "#f87171" : "#f59e0b"}`,
+                    boxShadow: timerUrgent ? "0 0 1.5vw rgba(248,113,113,0.25)" : "0 0 1.5vw rgba(245,158,11,0.15)",
+                  }}
+                >
+                  <span
+                    className="font-display font-black tabular-nums leading-none"
+                    style={{
+                      fontSize: "clamp(22px, 3vw, 60px)",
+                      color: timerUrgent ? "#f87171" : "#f59e0b",
+                      textShadow: timerUrgent ? "0 0 1vw rgba(248,113,113,0.5)" : "0 0 1vw rgba(245,158,11,0.3)",
+                    }}
+                  >
+                    {timerMins}:{timerSecs}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -2079,42 +2107,6 @@ export default function DisplayPage() {
 
       {/* Main content */}
       <div className="w-full flex-1 min-h-0 relative">{mainContent}</div>
-
-      {/* Banter timer — bottom-center */}
-      {isTimerRunning && (
-        <div
-          className="absolute left-0 right-0 flex justify-center"
-          style={{ bottom: "1.67vw" }}
-        >
-          <div
-            className="flex items-center rounded-2xl"
-            style={{
-              padding: "clamp(8px, 1.04vw, 20px) clamp(16px, 2.08vw, 40px)",
-              backgroundColor: timerUrgent
-                ? "rgba(25,4,4,0.95)"
-                : "rgba(8,8,10,0.93)",
-              border: `2px solid ${timerUrgent ? "#f87171" : "#f59e0b"}`,
-              backdropFilter: "blur(12px)",
-              boxShadow: timerUrgent
-                ? "0 0 2.08vw rgba(248,113,113,0.2)"
-                : "0 0 2.08vw rgba(245,158,11,0.1)",
-            }}
-          >
-            <span
-              className="font-display font-black tabular-nums leading-none"
-              style={{
-                fontSize: "clamp(28px, 4.58vw, 88px)",
-                color: timerUrgent ? "#f87171" : "#f59e0b",
-                textShadow: timerUrgent
-                  ? "0 0 1.56vw rgba(248,113,113,0.5)"
-                  : "0 0 1.56vw rgba(245,158,11,0.3)",
-              }}
-            >
-              {timerMins}:{timerSecs}
-            </span>
-          </div>
-        </div>
-      )}
 
       {/* Score popup */}
       {showScorePopup &&

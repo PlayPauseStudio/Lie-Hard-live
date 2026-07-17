@@ -1589,6 +1589,8 @@ export default function OperatorPage() {
           </div>
         </div>
 
+        {renderBanterTimer()}
+
         {/* Player statements — the live-written claims shown on the display */}
         <div className="rounded-xl p-5 space-y-3" style={{ backgroundColor: '#0d0d0f', border: '1px solid #27272a' }}>
           <p className="font-mono text-sm uppercase tracking-widest" style={{ color: '#52525b' }}>
