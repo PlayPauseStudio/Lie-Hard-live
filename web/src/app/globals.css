@@ -1,5 +1,5 @@
 /* ── Google Fonts: Big Shoulders Display + Outfit ── */
-@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Outfit:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Outfit:wght@400;500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -7,13 +7,19 @@
 
 /* ── Display font class ── */
 .font-display {
-  font-family: 'Big Shoulders Display', sans-serif;
+  font-family: "Big Shoulders Display", sans-serif;
 }
 
 /* ── Confetti fall ── */
 @keyframes fall {
-  0%   { transform: translateY(-100px) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(100vh)  rotate(720deg); opacity: 0; }
+  0% {
+    transform: translateY(-100px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
 }
 .animate-fall {
   animation: fall linear infinite;
@@ -21,8 +27,13 @@
 
 /* ── Breathe: subtle pulse for waiting states ── */
 @keyframes breathe {
-  0%, 100% { opacity: 0.25; }
-  50%       { opacity: 0.9; }
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.9;
+  }
 }
 .animate-breathe {
   animation: breathe 2.4s ease-in-out infinite;
@@ -30,9 +41,17 @@
 
 /* ── Reveal pop: dramatic scale-in for LIE/TRUTH big text ── */
 @keyframes reveal-pop {
-  0%   { transform: scale(0.55); opacity: 0; }
-  65%  { transform: scale(1.06); }
-  100% { transform: scale(1);    opacity: 1; }
+  0% {
+    transform: scale(0.55);
+    opacity: 0;
+  }
+  65% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 .animate-reveal-pop {
   animation: reveal-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
@@ -40,8 +59,14 @@
 
 /* ── Slide up: statement text in result screens ── */
 @keyframes slide-up {
-  0%   { transform: translateY(16px); opacity: 0; }
-  100% { transform: translateY(0);    opacity: 1; }
+  0% {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 .animate-slide-up {
   animation: slide-up 0.45s ease-out 0.3s both;
@@ -49,8 +74,14 @@
 
 /* ── Slide down: floating scoreboard overlay ── */
 @keyframes slide-down {
-  0%   { transform: translate(-50%, -140%); opacity: 0; }
-  100% { transform: translate(-50%, 0);      opacity: 1; }
+  0% {
+    transform: translate(-50%, -140%);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
 }
 .animate-slide-down {
   animation: slide-down 0.5s cubic-bezier(0.34, 1.4, 0.64, 1) both;
@@ -58,8 +89,14 @@
 
 /* ── Slide up bar: broadcast lower-third (Top Voters) ── */
 @keyframes slide-up-bar {
-  0%   { transform: translateY(100%); opacity: 0; }
-  100% { transform: translateY(0);    opacity: 1; }
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 .animate-slide-up-bar {
   animation: slide-up-bar 0.5s cubic-bezier(0.34, 1.4, 0.64, 1) both;
@@ -67,8 +104,12 @@
 
 /* ── Fade in: general ── */
 @keyframes fadeIn {
-  0%   { opacity: 0; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 .animate-fade-in {
   animation: fadeIn 0.5s ease-in-out;
@@ -82,5 +123,5 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+  font-family: "Outfit", ui-sans-serif, system-ui, sans-serif;
 }

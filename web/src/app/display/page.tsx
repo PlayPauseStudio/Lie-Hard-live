@@ -599,26 +599,45 @@ function TopVotersOverlay({
     .sort((a, b) => b.count - a.count)
     .slice(0, 3);
 
-  const medal: Record<number, string> = { 1: "#fbbf24", 2: "#cbd5e1", 3: "#d98c3f" };
-  const medalLight: Record<number, string> = { 1: "#fde68a", 2: "#f8fafc", 3: "#f2b280" };
+  const medal: Record<number, string> = {
+    1: "#fbbf24",
+    2: "#cbd5e1",
+    3: "#d98c3f",
+  };
+  const medalLight: Record<number, string> = {
+    1: "#fde68a",
+    2: "#f8fafc",
+    3: "#f2b280",
+  };
   // Podium order: 2nd, 1st, 3rd (1st centered & tallest), matching the leaderboard.
   const podium =
-    sorted.length >= 3 ? [sorted[1], sorted[0], sorted[2]] : sorted.length === 2 ? [sorted[1], sorted[0]] : sorted;
-  const podiumRank = sorted.length >= 3 ? [2, 1, 3] : sorted.length === 2 ? [2, 1] : [1];
-  const blockVh = sorted.length >= 3 ? [7, 11, 5] : sorted.length === 2 ? [7, 11] : [11];
+    sorted.length >= 3
+      ? [sorted[1], sorted[0], sorted[2]]
+      : sorted.length === 2
+        ? [sorted[1], sorted[0]]
+        : sorted;
+  const podiumRank =
+    sorted.length >= 3 ? [2, 1, 3] : sorted.length === 2 ? [2, 1] : [1];
+  const blockVh =
+    sorted.length >= 3 ? [7, 11, 5] : sorted.length === 2 ? [7, 11] : [11];
 
   return (
     <div
       className="absolute z-30 animate-fade-in"
-      style={{ top: "clamp(12px, 1.5vw, 32px)", right: "clamp(12px, 1.5vw, 32px)" }}
+      style={{
+        top: "clamp(12px, 1.5vw, 32px)",
+        right: "clamp(12px, 1.5vw, 32px)",
+      }}
     >
       <div
         className="rounded-2xl"
         style={{
           backgroundColor: "rgba(10,10,12,0.94)",
           border: "2px solid rgba(245,158,11,0.4)",
-          boxShadow: "0 0.5vw 2.5vw rgba(0,0,0,0.55), 0 0 2vw rgba(245,158,11,0.12)",
-          padding: "clamp(10px,1.2vw,24px) clamp(16px,1.9vw,38px) clamp(8px,1vw,20px)",
+          boxShadow:
+            "0 0.5vw 2.5vw rgba(0,0,0,0.55), 0 0 2vw rgba(245,158,11,0.12)",
+          padding:
+            "clamp(10px,1.2vw,24px) clamp(16px,1.9vw,38px) clamp(8px,1vw,20px)",
         }}
       >
         <p
@@ -633,17 +652,29 @@ function TopVotersOverlay({
           Top Voters
         </p>
         {sorted.length === 0 ? (
-          <p className="text-center" style={{ color: "#3f3f46", fontSize: "clamp(11px,1vw,20px)" }}>
+          <p
+            className="text-center"
+            style={{ color: "#3f3f46", fontSize: "clamp(11px,1vw,20px)" }}
+          >
             No votes yet
           </p>
         ) : (
-          <div className="flex items-end justify-center" style={{ gap: "clamp(6px,0.7vw,14px)" }}>
+          <div
+            className="flex items-end justify-center"
+            style={{ gap: "clamp(6px,0.7vw,14px)" }}
+          >
             {podium.map((v, i) => {
               const rank = podiumRank[i];
               const isFirst = rank === 1;
-              const discSz = isFirst ? "clamp(34px,3.4vw,68px)" : "clamp(28px,2.8vw,56px)";
+              const discSz = isFirst
+                ? "clamp(34px,3.4vw,68px)"
+                : "clamp(28px,2.8vw,56px)";
               return (
-                <div key={v.uid} className="flex flex-col items-center" style={{ gap: "0.4vw" }}>
+                <div
+                  key={v.uid}
+                  className="flex flex-col items-center"
+                  style={{ gap: "0.4vw" }}
+                >
                   <div
                     className="rounded-full flex items-center justify-center shrink-0"
                     style={{
@@ -655,7 +686,12 @@ function TopVotersOverlay({
                   >
                     <span
                       className="font-display font-black"
-                      style={{ color: "#1a1204", fontSize: isFirst ? "clamp(16px,1.6vw,32px)" : "clamp(13px,1.3vw,26px)" }}
+                      style={{
+                        color: "#1a1204",
+                        fontSize: isFirst
+                          ? "clamp(16px,1.6vw,32px)"
+                          : "clamp(13px,1.3vw,26px)",
+                      }}
                     >
                       {rank}
                     </span>
@@ -665,14 +701,21 @@ function TopVotersOverlay({
                     style={{
                       maxWidth: "clamp(70px,7vw,150px)",
                       color: isFirst ? "#ffffff" : "#d4d4d8",
-                      fontSize: isFirst ? "clamp(14px,1.4vw,28px)" : "clamp(12px,1.2vw,24px)",
+                      fontSize: isFirst
+                        ? "clamp(14px,1.4vw,28px)"
+                        : "clamp(12px,1.2vw,24px)",
                     }}
                   >
                     {v.name}
                   </p>
                   <p
                     className="font-display font-black"
-                    style={{ color: isFirst ? "#f59e0b" : "#e4e4e7", fontSize: isFirst ? "clamp(16px,1.7vw,34px)" : "clamp(14px,1.4vw,28px)" }}
+                    style={{
+                      color: isFirst ? "#f59e0b" : "#e4e4e7",
+                      fontSize: isFirst
+                        ? "clamp(16px,1.7vw,34px)"
+                        : "clamp(14px,1.4vw,28px)",
+                    }}
                   >
                     {v.count} ✓
                   </p>
@@ -681,11 +724,19 @@ function TopVotersOverlay({
                     style={{
                       width: "clamp(50px,5vw,100px)",
                       height: `${blockVh[i]}vh`,
-                      backgroundColor: isFirst ? "rgba(245,158,11,0.12)" : "rgba(255,255,255,0.03)",
+                      backgroundColor: isFirst
+                        ? "rgba(245,158,11,0.12)"
+                        : "rgba(255,255,255,0.03)",
                       border: `1px solid ${isFirst ? "rgba(245,158,11,0.4)" : "rgba(245,158,11,0.15)"}`,
                     }}
                   >
-                    <span className="font-display font-black" style={{ color: medal[rank], fontSize: "clamp(20px,2.2vw,44px)" }}>
+                    <span
+                      className="font-display font-black"
+                      style={{
+                        color: medal[rank],
+                        fontSize: "clamp(20px,2.2vw,44px)",
+                      }}
+                    >
                       #{rank}
                     </span>
                   </div>
