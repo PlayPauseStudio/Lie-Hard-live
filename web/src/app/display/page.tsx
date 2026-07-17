@@ -599,17 +599,6 @@ function TopVotersOverlay({
     .sort((a, b) => b.count - a.count)
     .slice(0, 3);
 
-  const medal: Record<number, string> = {
-    1: "#fbbf24",
-    2: "#cbd5e1",
-    3: "#d98c3f",
-  };
-  const medalLight: Record<number, string> = {
-    1: "#fde68a",
-    2: "#f8fafc",
-    3: "#f2b280",
-  };
-  // Podium order: 2nd, 1st, 3rd (1st centered & tallest), matching the leaderboard.
   const podium =
     sorted.length >= 3
       ? [sorted[1], sorted[0], sorted[2]]
@@ -618,134 +607,168 @@ function TopVotersOverlay({
         : sorted;
   const podiumRank =
     sorted.length >= 3 ? [2, 1, 3] : sorted.length === 2 ? [2, 1] : [1];
+  const vwSizes =
+    sorted.length >= 3
+      ? [13, 16.5, 11.5]
+      : sorted.length === 2
+        ? [13.5, 16.5]
+        : [17];
   const blockVh =
-    sorted.length >= 3 ? [7, 11, 5] : sorted.length === 2 ? [7, 11] : [11];
+    sorted.length >= 3 ? [20, 30, 14] : sorted.length === 2 ? [20, 30] : [30];
+
+  // Medal colours match the leaderboard's rank colours (gold/silver/bronze).
+  const medal = (r: number) =>
+    r === 1 ? "#fbbf24" : r === 2 ? "#94a3b8" : "#cd7c2f";
+  const medalLight = (r: number) =>
+    r === 1 ? "#fde68a" : r === 2 ? "#e2e8f0" : "#f2b280";
 
   return (
     <div
-      className="absolute z-30 animate-fade-in"
-      style={{
-        top: "clamp(12px, 1.5vw, 32px)",
-        right: "clamp(12px, 1.5vw, 32px)",
-      }}
+      className="absolute inset-0 z-50 flex items-center justify-center"
+      style={{ backgroundColor: "#08080a" }}
     >
+      {/* Confetti */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {[...Array(60)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute animate-fall"
+            style={{
+              left: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 5}s`,
+              animationDuration: `${2 + Math.random() * 3}s`,
+              width: 10 + Math.random() * 8,
+              height: 10 + Math.random() * 8,
+              backgroundColor: [
+                "#f59e0b",
+                "#fbbf24",
+                "#4ade80",
+                "#60a5fa",
+                "#f472b6",
+              ][Math.floor(Math.random() * 5)],
+              borderRadius: Math.random() > 0.5 ? "50%" : "2px",
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Heading — top-left, boxed (same layout as the leaderboard) */}
       <div
-        className="rounded-2xl"
+        className="absolute"
         style={{
-          backgroundColor: "rgba(10,10,12,0.94)",
-          border: "2px solid rgba(245,158,11,0.4)",
-          boxShadow:
-            "0 0.5vw 2.5vw rgba(0,0,0,0.55), 0 0 2vw rgba(245,158,11,0.12)",
-          padding:
-            "clamp(10px,1.2vw,24px) clamp(16px,1.9vw,38px) clamp(8px,1vw,20px)",
+          top: "clamp(16px, 3.3vw, 56px)",
+          left: "clamp(24px, 4.6vw, 80px)",
+          scale: "1.3",
         }}
       >
-        <p
-          className="font-display font-black uppercase text-center"
+        <div
+          className="inline-flex items-center"
           style={{
-            color: "#f59e0b",
-            fontSize: "clamp(13px,1.4vw,28px)",
-            letterSpacing: "0.05em",
-            marginBottom: "clamp(8px,0.9vw,18px)",
+            padding: "1.5vw 2vw",
+            backgroundColor: "rgba(28,28,32,0.65)",
+            border: "2px solid #f59e0b",
+            borderRadius: "1.2vw",
+            boxShadow: "0 0.42vw 2.6vw rgba(0,0,0,0.55)",
           }}
         >
-          Top Voters
+          <span
+            className="font-display font-black uppercase leading-none"
+            style={{ color: "#f59e0b", fontSize: "clamp(22px, 2.7vw, 56px)" }}
+          >
+            TOP VOTERS
+          </span>
+        </div>
+      </div>
+
+      {sorted.length === 0 ? (
+        <p
+          className="font-display uppercase tracking-widest"
+          style={{ color: "#3f3f46", fontSize: "clamp(18px, 2vw, 40px)" }}
+        >
+          No votes yet
         </p>
-        {sorted.length === 0 ? (
-          <p
-            className="text-center"
-            style={{ color: "#3f3f46", fontSize: "clamp(11px,1vw,20px)" }}
-          >
-            No votes yet
-          </p>
-        ) : (
-          <div
-            className="flex items-end justify-center"
-            style={{ gap: "clamp(6px,0.7vw,14px)" }}
-          >
-            {podium.map((v, i) => {
-              const rank = podiumRank[i];
-              const isFirst = rank === 1;
-              const discSz = isFirst
-                ? "clamp(34px,3.4vw,68px)"
-                : "clamp(28px,2.8vw,56px)";
-              return (
+      ) : (
+        /* Podium — centered */
+        <div className="flex items-end relative" style={{ gap: "3.5vw" }}>
+          {podium.map((v, i) => {
+            const rank = podiumRank[i];
+            const isFirst = rank === 1;
+            const vwSz = vwSizes[i];
+            const blockH = blockVh[i];
+
+            return (
+              <div
+                key={v.uid}
+                className="flex flex-col items-center"
+                style={{ gap: "0.63vw" }}
+              >
+                {/* Medal disc with tick mark (replaces the photo) */}
                 <div
-                  key={v.uid}
-                  className="flex flex-col items-center"
-                  style={{ gap: "0.4vw" }}
+                  className="rounded-full flex items-center justify-center"
+                  style={{
+                    width: `${vwSz}vw`,
+                    height: `${vwSz}vw`,
+                    background: `radial-gradient(circle at 34% 28%, ${medalLight(rank)}, ${medal(rank)})`,
+                    border: `0.26vw solid ${medal(rank)}`,
+                    boxShadow: isFirst
+                      ? `0 0 2.6vw 0.63vw rgba(251,191,36,0.3)`
+                      : "inset 0 0 0 0.16vw rgba(255,255,255,0.35)",
+                  }}
                 >
-                  <div
-                    className="rounded-full flex items-center justify-center shrink-0"
-                    style={{
-                      width: discSz,
-                      height: discSz,
-                      background: `radial-gradient(circle at 34% 28%, ${medalLight[rank]}, ${medal[rank]})`,
-                      boxShadow: `0 0 0.8vw ${medal[rank]}66, inset 0 0 0 2px rgba(255,255,255,0.35)`,
-                    }}
+                  <span
+                    className="font-display font-black"
+                    style={{ color: "#1a1204", fontSize: `${vwSz * 0.52}vw` }}
                   >
-                    <span
-                      className="font-display font-black"
-                      style={{
-                        color: "#1a1204",
-                        fontSize: isFirst
-                          ? "clamp(16px,1.6vw,32px)"
-                          : "clamp(13px,1.3vw,26px)",
-                      }}
-                    >
-                      {rank}
-                    </span>
-                  </div>
-                  <p
-                    className="font-display font-bold text-center truncate"
-                    style={{
-                      maxWidth: "clamp(70px,7vw,150px)",
-                      color: isFirst ? "#ffffff" : "#d4d4d8",
-                      fontSize: isFirst
-                        ? "clamp(14px,1.4vw,28px)"
-                        : "clamp(12px,1.2vw,24px)",
-                    }}
-                  >
-                    {v.name}
-                  </p>
-                  <p
+                    ✓
+                  </span>
+                </div>
+                <p
+                  className="font-bold text-center"
+                  style={{
+                    fontSize: isFirst
+                      ? "clamp(34px, 3.8vw, 74px)"
+                      : "clamp(28px, 3.1vw, 60px)",
+                    color: isFirst ? "#ffffff" : "#d4d4d8",
+                  }}
+                >
+                  {v.name}
+                </p>
+                <p
+                  className="font-display font-black"
+                  style={{
+                    color: isFirst ? "#f59e0b" : "#e4e4e7",
+                    fontSize: "clamp(32px, 3.4vw, 68px)",
+                  }}
+                >
+                  {v.count} ✓
+                </p>
+                {/* Podium block */}
+                <div
+                  className="rounded-t-2xl flex items-center justify-center"
+                  style={{
+                    width: "14vw",
+                    height: `${blockH}vh`,
+                    backgroundColor: isFirst
+                      ? "rgba(245,158,11,0.12)"
+                      : "rgba(255,255,255,0.03)",
+                    border: `1px solid ${isFirst ? "rgba(245,158,11,0.4)" : "rgba(245,158,11,0.15)"}`,
+                  }}
+                >
+                  <span
                     className="font-display font-black"
                     style={{
-                      color: isFirst ? "#f59e0b" : "#e4e4e7",
-                      fontSize: isFirst
-                        ? "clamp(16px,1.7vw,34px)"
-                        : "clamp(14px,1.4vw,28px)",
+                      color: medal(rank),
+                      fontSize: "clamp(38px, 4.8vw, 96px)",
                     }}
                   >
-                    {v.count} ✓
-                  </p>
-                  <div
-                    className="rounded-t-lg flex items-center justify-center"
-                    style={{
-                      width: "clamp(50px,5vw,100px)",
-                      height: `${blockVh[i]}vh`,
-                      backgroundColor: isFirst
-                        ? "rgba(245,158,11,0.12)"
-                        : "rgba(255,255,255,0.03)",
-                      border: `1px solid ${isFirst ? "rgba(245,158,11,0.4)" : "rgba(245,158,11,0.15)"}`,
-                    }}
-                  >
-                    <span
-                      className="font-display font-black"
-                      style={{
-                        color: medal[rank],
-                        fontSize: "clamp(20px,2.2vw,44px)",
-                      }}
-                    >
-                      #{rank}
-                    </span>
-                  </div>
+                    #{rank}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
