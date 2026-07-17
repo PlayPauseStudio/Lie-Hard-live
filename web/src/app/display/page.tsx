@@ -482,20 +482,29 @@ function LeaderboardModal({ players }: { players: Player[] }) {
         ))}
       </div>
 
-      {/* Heading — top-left, huge & bright */}
-      <h1
-        className="absolute font-display font-black tracking-tight"
-        style={{
-          top: "clamp(16px, 2.2vw, 56px)",
-          left: "clamp(24px, 3.5vw, 80px)",
-          fontSize: "clamp(48px, 7vw, 160px)",
-          lineHeight: 0.9,
-          color: "#fbbf24",
-          textShadow: "0 0 4vw rgba(245,158,11,0.5)",
-        }}
+      {/* Heading — top-left, boxed like the voting "Closed" pill */}
+      <div
+        className="absolute"
+        style={{ top: "clamp(16px, 2.2vw, 56px)", left: "clamp(24px, 3.5vw, 80px)" }}
       >
-        SCOREBOARD
-      </h1>
+        <div
+          className="inline-flex items-center"
+          style={{
+            padding: "1.5vw 2vw",
+            backgroundColor: "rgba(28,28,32,0.65)",
+            border: "2px solid rgba(113,113,122,0.5)",
+            borderRadius: "1.2vw",
+            boxShadow: "0 0.42vw 2.6vw rgba(0,0,0,0.55)",
+          }}
+        >
+          <span
+            className="font-display font-black uppercase leading-none"
+            style={{ color: "#a1a1aa", fontSize: "clamp(22px, 2.7vw, 56px)" }}
+          >
+            SCOREBOARD
+          </span>
+        </div>
+      </div>
 
       {/* Podium — centered */}
       <div className="flex items-end relative" style={{ gap: "3.5vw" }}>
