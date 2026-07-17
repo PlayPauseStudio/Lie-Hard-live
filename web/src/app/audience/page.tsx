@@ -89,6 +89,7 @@ export default function AudiencePage() {
   const { gameState, emit, connected } = useGameState<GameState>('audience', { getToken, enabled: !!user });
   const [myVote, setMyVote] = useState<{ choice: string; votingRound: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [voteError, setVoteError] = useState('');
   const [showChange, setShowChange] = useState(false);
   const [lastVotingRound, setLastVotingRound] = useState<string | null>(null);
 
@@ -121,6 +122,7 @@ export default function AudiencePage() {
     if (currentVotingRound !== lastVotingRound) {
       setLastVotingRound(currentVotingRound);
       setShowChange(false);
+      setVoteError('');
     }
   }, [currentVotingRound, lastVotingRound]);
 
@@ -196,12 +198,29 @@ export default function AudiencePage() {
 
   async function vote(choice: string) {
     if (!user || !gameState || !voterDoc) return;
+    if (!connected) {
+      setVoteError('Reconnecting to the show… wait a moment and tap again.');
+      return;
+    }
     setSubmitting(true);
+    setVoteError('');
     try {
       // The server derives the round, validates it's open, and dedupes per uid.
       const ack = await emit(AUD.VOTE, { choice });
       if (ack.ok && ack.votingRound) {
         setMyVote({ choice: ack.choice ?? choice, votingRound: ack.votingRound });
+      } else {
+        // Surface why the vote didn't take instead of silently dropping it.
+        console.warn('Vote rejected:', ack);
+        const e = ack.error;
+        setVoteError(
+          e === 'no_open_round' ? 'Voting is not open right now.'
+          : e === 'not_all_revealed' ? 'Hang on — wait for all the statements to be shown.'
+          : e === 'rate_limited' ? 'Slow down a second, then tap again.'
+          : e === 'timeout' || e === 'not_connected' ? 'Connection hiccup — please tap again.'
+          : e === 'forbidden' ? 'Please sign in again to vote.'
+          : `Couldn't submit your vote — please try again.${e ? ` (${e})` : ''}`,
+        );
       }
     } finally {
       setSubmitting(false);
@@ -213,6 +232,12 @@ export default function AudiencePage() {
   const alreadyVoted = myVote?.votingRound === currentVotingRound;
   const showButtons = !alreadyVoted || showChange;
   const btnBase = 'w-full rounded-2xl py-8 text-2xl font-bold mb-4 disabled:opacity-50 active:scale-95 transition-transform';
+
+  const voteErrorToast = voteError ? (
+    <div className="fixed bottom-4 left-4 right-4 z-50 rounded-2xl px-5 py-4 text-center" style={{ backgroundColor: '#450a0a', border: '1px solid #f87171' }}>
+      <p className="text-red-200 text-base font-semibold">{voteError}</p>
+    </div>
+  ) : null;
 
   // ── SCREEN: Loading ───────────────────────────────────────────────────────
 
@@ -454,6 +479,7 @@ export default function AudiencePage() {
                 onClick={() => { setShowChange(false); vote('LIE'); }}>✗ LIE</button>
             </>
           ) : <ConfirmationMessage choice={myVote!.choice} />}
+          {voteErrorToast}
         </div>
       </div>
     );
@@ -483,6 +509,7 @@ export default function AudiencePage() {
                 onClick={() => { setShowChange(false); vote('LIE'); }}>LIE</button>
             </>
           ) : <ConfirmationMessage choice={myVote!.choice} />}
+          {voteErrorToast}
         </div>
       </div>
     );
@@ -534,6 +561,7 @@ export default function AudiencePage() {
           ) : (
             <p className="text-gray-500 text-center text-base mt-4">Voting opens after all statements are revealed</p>
           )}
+          {voteErrorToast}
         </div>
       </div>
     );
@@ -560,6 +588,7 @@ export default function AudiencePage() {
               ))}
             </>
           ) : <ConfirmationMessage choice={myVote!.choice} />}
+          {voteErrorToast}
         </div>
       </div>
     );
