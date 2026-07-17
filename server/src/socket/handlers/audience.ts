@@ -42,10 +42,12 @@ export function registerAudienceHandlers(
     const cb = typeof ack === 'function' ? ack : () => {};
     const uid = socket.data.uid;
     if (socket.data.role !== 'audience' || !uid) {
+      logger.warn({ role: socket.data.role }, 'aud:vote rejected — not an audience socket');
       cb({ ok: false, error: 'forbidden' });
       return;
     }
     if (!limiter.take(uid)) {
+      logger.warn({ uid }, 'aud:vote rejected — rate limited');
       cb({ ok: false, error: 'rate_limited' });
       return;
     }
@@ -59,25 +61,34 @@ export function registerAudienceHandlers(
     const gs = store.getState();
     const round = getCurrentVotingRound(gs);
     if (!round) {
+      logger.warn({ uid, choice: parsed.data.choice }, 'aud:vote rejected — no open round');
       cb({ ok: false, error: 'no_open_round' });
       return;
     }
     const invalid = validateChoice(gs, round, parsed.data.choice);
     if (invalid) {
+      logger.warn({ uid, round, choice: parsed.data.choice, reason: invalid }, 'aud:vote rejected — invalid choice');
       cb({ ok: false, error: invalid });
       return;
     }
 
-    // Resolve display name (cached, or one lazy lookup for returning voters).
-    let name = socket.data.name;
-    if (!name) {
-      const v = await getVoter(uid).catch(() => null);
-      name = v?.name;
-      socket.data.name = name;
-    }
-
-    store.recordVote(uid, { choice: parsed.data.choice, votingRound: round, displayName: name, ts: Date.now() });
+    // Record the vote immediately and ack — never block on the Firestore name
+    // lookup, which for a returning voter could otherwise delay or hang the vote.
+    store.recordVote(uid, {
+      choice: parsed.data.choice,
+      votingRound: round,
+      displayName: socket.data.name,
+      ts: Date.now(),
+    });
     broadcaster.markVotesDirty();
     cb({ ok: true, choice: parsed.data.choice, votingRound: round });
+    logger.info({ uid, round, choice: parsed.data.choice }, 'aud:vote recorded');
+
+    // Backfill the display name for returning voters in the background.
+    if (!socket.data.name) {
+      getVoter(uid)
+        .then((v) => { if (v?.name) socket.data.name = v.name; })
+        .catch(() => {});
+    }
   });
 }

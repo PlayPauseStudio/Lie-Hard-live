@@ -41,7 +41,7 @@ export function createIo(httpServer: HttpServer, store: RoomStore, mirror?: Game
 
   io.on('connection', (socket: AppSocket) => {
     const { role } = socket.data;
-    logger.debug({ role, uid: socket.data.uid, id: socket.id }, 'socket connected');
+    logger.info({ role, uid: socket.data.uid, id: socket.id }, 'socket connected');
 
     // audience → redacted room; operator + display → full-fidelity room.
     socket.join(role === 'audience' ? ROOM_AUDIENCE : ROOM_FULL);
