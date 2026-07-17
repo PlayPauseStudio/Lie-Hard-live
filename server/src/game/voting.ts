@@ -7,14 +7,19 @@ import type { GameState } from './state';
  * which round a vote belongs to.
  */
 export function getCurrentVotingRound(gs: GameState): string | null {
-  if (gs.warmup.audienceVotingOpen) return `warmup-${gs.warmup.currentIndex}`;
-  if (gs.segment1.audienceVotingOpen && gs.segment1.currentStorytellerId != null) {
+  // Gate on the current phase (matching the audience client) so a stale
+  // audienceVotingOpen flag left on from an earlier segment can't hijack the
+  // round — otherwise a seg3 vote gets validated against seg1 (invalid_choice).
+  if (gs.phase === 'WARMUP' && gs.warmup.audienceVotingOpen) {
+    return `warmup-${gs.warmup.currentIndex}`;
+  }
+  if (gs.phase === 'SEGMENT1' && gs.segment1.audienceVotingOpen && gs.segment1.currentStorytellerId != null) {
     return `seg1-${gs.segment1.currentStorytellerId}`;
   }
-  if (gs.segment2.audienceVotingOpen && gs.segment2.currentStorytellerId != null) {
+  if (gs.phase === 'SEGMENT2' && gs.segment2.audienceVotingOpen && gs.segment2.currentStorytellerId != null) {
     return `seg2-${gs.segment2.currentStorytellerId}`;
   }
-  if (gs.segment3.audienceVotingOpen) return 'seg3';
+  if (gs.phase === 'SEGMENT3' && gs.segment3.audienceVotingOpen) return 'seg3';
   return null;
 }
 
