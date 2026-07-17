@@ -76,6 +76,7 @@ interface GameState {
     audienceVotingOpen: boolean;
     showResult: boolean;
     winnerId: number | null;
+    playerStatements?: { [playerId: number]: string };
   };
   audienceVotes: {
     [deviceId: string]: {
@@ -1724,9 +1725,9 @@ function Segment3Screen({ gameState }: { gameState: GameState }) {
         )}
       </div>
 
-      {/* Right — player vote bars */}
+      {/* Right — player claims (statements are the hero; votes are secondary) */}
       <div
-        className="w-1/2 h-full flex flex-col justify-center"
+        className="w-1/2 h-full flex flex-col justify-center overflow-hidden"
         style={{
           borderLeft: "1px solid rgba(245,158,11,0.2)",
           padding: "0 3.33vw",
@@ -1739,64 +1740,48 @@ function Segment3Screen({ gameState }: { gameState: GameState }) {
         >
           Who does this belong to?
         </p>
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: "1.25vw" }}
-        >
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.25vw" }}>
           {players.map((player) => {
             const count = playerCounts[player.id] ?? 0;
-            const pct =
-              totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+            const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+            const statement = segment3.playerStatements?.[player.id] ?? "";
+            const showVotes = gameState.showVoteBars ?? true;
             return (
-              <div
-                key={player.id}
-                className="flex items-center"
-                style={{ gap: "1.04vw" }}
-              >
+              <div key={player.id} className="flex items-start" style={{ gap: "1.04vw" }}>
                 <img
                   src={player.photo}
                   alt={player.name}
                   className="rounded-full object-cover shrink-0"
-                  style={{
-                    width: "5.5vw",
-                    height: "5.5vw",
-                    border: "2px solid rgba(245,158,11,0.25)",
-                  }}
+                  style={{ width: "5.5vw", height: "5.5vw", border: "2px solid rgba(245,158,11,0.25)" }}
                 />
-                <div className="flex-1">
-                  <div
-                    className="flex justify-between"
-                    style={{ marginBottom: "0.42vw" }}
-                  >
-                    <span
-                      className="font-display font-bold text-white"
-                      style={{ fontSize: "clamp(18px, 1.9vw, 40px)" }}
-                    >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline justify-between" style={{ gap: "1vw" }}>
+                    <span className="font-display font-bold text-white" style={{ fontSize: "clamp(18px, 1.9vw, 40px)" }}>
                       {player.name}
                     </span>
-                    {(gameState.showVoteBars ?? true) && (
-                      <span
-                        className="font-display font-bold"
-                        style={{
-                          color: "#a1a1aa",
-                          fontSize: "clamp(15px, 1.5vw, 30px)",
-                        }}
-                      >
+                    {showVotes && (
+                      <span className="font-display font-bold shrink-0" style={{ color: "#a1a1aa", fontSize: "clamp(14px, 1.4vw, 28px)" }}>
                         {count} · {pct}%
                       </span>
                     )}
                   </div>
-                  {(gameState.showVoteBars ?? true) && (
+                  <p
+                    className="font-display leading-snug"
+                    style={{
+                      color: statement ? "#e4e4e7" : "#3f3f46",
+                      fontStyle: statement ? "normal" : "italic",
+                      fontSize: "clamp(15px, 1.6vw, 32px)",
+                      marginTop: "0.3vw",
+                    }}
+                  >
+                    {statement || "—"}
+                  </p>
+                  {showVotes && (
                     <div
                       className="w-full rounded-full overflow-hidden"
-                      style={{
-                        height: "clamp(12px, 2.1vw, 44px)",
-                        backgroundColor: "#18181b",
-                      }}
+                      style={{ height: "clamp(6px, 0.9vw, 16px)", backgroundColor: "#18181b", marginTop: "0.5vw" }}
                     >
-                      <div
-                        className="h-full rounded-full transition-all duration-700"
-                        style={{ width: `${pct}%`, backgroundColor: "#f59e0b" }}
-                      />
+                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: "#f59e0b" }} />
                     </div>
                   )}
                 </div>
@@ -1805,10 +1790,7 @@ function Segment3Screen({ gameState }: { gameState: GameState }) {
           })}
         </div>
         {(gameState.showVoteBars ?? true) && (
-          <p
-            className="font-mono"
-            style={{ color: "#3f3f46", fontSize: "clamp(11px, 1.04vw, 20px)" }}
-          >
+          <p className="font-mono" style={{ color: "#3f3f46", fontSize: "clamp(11px, 1.04vw, 20px)" }}>
             {totalVotes} vote{totalVotes !== 1 ? "s" : ""}
           </p>
         )}

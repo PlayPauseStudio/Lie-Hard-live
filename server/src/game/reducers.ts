@@ -225,6 +225,15 @@ export function editSeg3Object(
   return { segment3: { ...state.segment3, photoUrl, photoTitle } };
 }
 
+export function setSeg3Statement(state: GameState, playerId: number, statement: string): Patch {
+  return {
+    segment3: {
+      ...state.segment3,
+      playerStatements: { ...state.segment3.playerStatements, [playerId]: statement },
+    },
+  };
+}
+
 // ── Award points (seg1 / seg2) ───────────────────────────────────────────────
 
 export function awardSegment(state: GameState, segment: SegmentKey): Patch {

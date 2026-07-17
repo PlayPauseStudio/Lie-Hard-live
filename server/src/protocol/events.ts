@@ -17,6 +17,7 @@ export const OP = {
   EDIT_SEG1: 'op:editSeg1',
   EDIT_SEG2: 'op:editSeg2',
   EDIT_SEG3: 'op:editSeg3',
+  SET_SEG3_STATEMENT: 'op:setSeg3Statement',
   AWARD_SEGMENT: 'op:awardSegment',
   AWARD_SEGMENT3: 'op:awardSegment3',
   ADJUST_SCORE: 'op:adjustScore',

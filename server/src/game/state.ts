@@ -90,6 +90,8 @@ export interface GameState {
     audienceVotingOpen: boolean;
     showResult: boolean;
     winnerId: number | null;
+    // Operator-written live summary of each player's claim, keyed by player id.
+    playerStatements: { [playerId: number]: string };
   };
   audienceVotes: { [uid: string]: AudienceVote };
   voterScores: { [uid: string]: VoterScore };
@@ -135,7 +137,7 @@ export function initialGameState(): GameState {
       completedStorytellers: [],
       revealedStatements: [],
     },
-    segment3: { photoUrl: null, photoTitle: null, audienceVotingOpen: false, showResult: false, winnerId: null },
+    segment3: { photoUrl: null, photoTitle: null, audienceVotingOpen: false, showResult: false, winnerId: null, playerStatements: {} },
     audienceVotes: {},
     voterScores: {},
   };
