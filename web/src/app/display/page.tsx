@@ -485,21 +485,25 @@ function LeaderboardModal({ players }: { players: Player[] }) {
       {/* Heading — top-left, boxed like the voting "Closed" pill */}
       <div
         className="absolute"
-        style={{ top: "clamp(16px, 2.2vw, 56px)", left: "clamp(24px, 3.5vw, 80px)" }}
+        style={{
+          top: "clamp(16px, 3.3vw, 56px)",
+          left: "clamp(24px, 4.6vw, 80px)",
+          scale: "1.3",
+        }}
       >
         <div
           className="inline-flex items-center"
           style={{
             padding: "1.5vw 2vw",
             backgroundColor: "rgba(28,28,32,0.65)",
-            border: "2px solid rgba(113,113,122,0.5)",
+            border: "2px solid #f59e0b",
             borderRadius: "1.2vw",
             boxShadow: "0 0.42vw 2.6vw rgba(0,0,0,0.55)",
           }}
         >
           <span
             className="font-display font-black uppercase leading-none"
-            style={{ color: "#a1a1aa", fontSize: "clamp(22px, 2.7vw, 56px)" }}
+            style={{ color: "#f59e0b", fontSize: "clamp(22px, 2.7vw, 56px)" }}
           >
             SCOREBOARD
           </span>
@@ -1153,9 +1157,16 @@ function Segment1Screen({ gameState }: { gameState: GameState }) {
         ) : (
           <div
             className="w-full rounded-2xl flex items-center justify-center"
-            style={{ backgroundColor: "#0d0d0f", border: "1px dashed rgba(245,158,11,0.2)", padding: "clamp(20px, 3vw, 60px)" }}
+            style={{
+              backgroundColor: "#0d0d0f",
+              border: "1px dashed rgba(245,158,11,0.2)",
+              padding: "clamp(20px, 3vw, 60px)",
+            }}
           >
-            <p className="font-display uppercase tracking-widest" style={{ color: "#3f3f46", fontSize: "clamp(12px, 1.4vw, 28px)" }}>
+            <p
+              className="font-display uppercase tracking-widest"
+              style={{ color: "#3f3f46", fontSize: "clamp(12px, 1.4vw, 28px)" }}
+            >
               Statement hidden
             </p>
           </div>
@@ -1683,7 +1694,7 @@ function Segment3Screen({ gameState }: { gameState: GameState }) {
           <PlayerAvatar player={winner} vwSize={14.58} glow />
         </div>
         <p
-          className="font-display font-black text-white relative"
+          className="font-display font-black text-[#f59e0b] relative"
           style={{ fontSize: "clamp(28px, 4.58vw, 88px)" }}
         >
           {winner.name}
@@ -1762,17 +1773,29 @@ function Segment3Screen({ gameState }: { gameState: GameState }) {
         >
           Who does this belong to?
         </p>
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.25vw" }}>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "1.25vw" }}
+        >
           {players.map((player) => {
             const count = playerCounts[player.id] ?? 0;
-            const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+            const pct =
+              totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
             const statement = segment3.playerStatements?.[player.id] ?? "";
             const showVotes = gameState.showVoteBars ?? true;
             const shown = (segment3.shownStatements ?? []).includes(player.id);
             // Match Round 1's statement size; scale down as the player count grows.
-            const stmtFont = players.length <= 3 ? "clamp(18px, 2.71vw, 52px)" : players.length === 4 ? "clamp(16px, 2.2vw, 44px)" : "clamp(14px, 1.9vw, 38px)";
+            const stmtFont =
+              players.length <= 3
+                ? "clamp(18px, 2.71vw, 52px)"
+                : players.length === 4
+                  ? "clamp(16px, 2.2vw, 44px)"
+                  : "clamp(14px, 1.9vw, 38px)";
             return (
-              <div key={player.id} className="flex flex-col" style={{ gap: "0.4vw" }}>
+              <div
+                key={player.id}
+                className="flex flex-col"
+                style={{ gap: "0.4vw" }}
+              >
                 {/* Horizontal claim card — photo + name + statement side by side (wide, not tall), Round-1 gold box */}
                 <div
                   className="rounded-3xl w-full overflow-hidden flex items-center"
@@ -1787,29 +1810,60 @@ function Segment3Screen({ gameState }: { gameState: GameState }) {
                     src={player.photo}
                     alt={player.name}
                     className="rounded-full object-cover shrink-0"
-                    style={{ width: "clamp(44px, 4.5vw, 92px)", height: "clamp(44px, 4.5vw, 92px)", border: "2px solid rgba(245,158,11,0.4)" }}
+                    style={{
+                      width: "clamp(44px, 4.5vw, 92px)",
+                      height: "clamp(44px, 4.5vw, 92px)",
+                      border: "2px solid rgba(245,158,11,0.4)",
+                    }}
                   />
-                  <span className="font-display font-bold text-white shrink-0" style={{ fontSize: "clamp(16px, 1.7vw, 36px)" }}>
+                  <span
+                    className="font-display font-bold text-[#f59e0b] shrink-0"
+                    style={{ fontSize: "clamp(16px, 1.7vw, 36px)" }}
+                  >
                     {player.name}
                   </span>
                   {shown ? (
-                    <p className="font-display leading-tight flex-1 min-w-0" style={{ fontSize: stmtFont, color: "#ffffff" }}>
+                    <p
+                      className="font-display leading-tight flex-1 min-w-0"
+                      style={{ fontSize: stmtFont, color: "#ffffff" }}
+                    >
                       {statement || "—"}
                     </p>
                   ) : (
-                    <p className="font-display uppercase tracking-widest flex-1 min-w-0" style={{ fontSize: "clamp(13px, 1.4vw, 28px)", color: "#3f3f46" }}>
+                    <p
+                      className="font-display uppercase tracking-widest flex-1 min-w-0"
+                      style={{
+                        fontSize: "clamp(13px, 1.4vw, 28px)",
+                        color: "#3f3f46",
+                      }}
+                    >
                       Hidden
                     </p>
                   )}
                   {showVotes && (
-                    <span className="font-display font-bold shrink-0" style={{ color: "#a1a1aa", fontSize: "clamp(14px, 1.5vw, 30px)" }}>
+                    <span
+                      className="font-display font-bold shrink-0"
+                      style={{
+                        color: "#a1a1aa",
+                        fontSize: "clamp(14px, 1.5vw, 30px)",
+                      }}
+                    >
                       {count} · {pct}%
                     </span>
                   )}
                 </div>
                 {showVotes && (
-                  <div className="w-full rounded-full overflow-hidden" style={{ height: "clamp(6px, 0.9vw, 16px)", backgroundColor: "#18181b" }}>
-                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: "#f59e0b" }} />
+                  <div
+                    className="w-full rounded-full overflow-hidden"
+                    style={{
+                      height: "clamp(6px, 0.9vw, 16px)",
+                      backgroundColor: "#18181b",
+                    }}
+                  >
+                    <div
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{ width: `${pct}%`, backgroundColor: "#f59e0b" }}
+                    />
                   </div>
                 )}
               </div>
@@ -1817,7 +1871,10 @@ function Segment3Screen({ gameState }: { gameState: GameState }) {
           })}
         </div>
         {(gameState.showVoteBars ?? true) && (
-          <p className="font-mono" style={{ color: "#3f3f46", fontSize: "clamp(11px, 1.04vw, 20px)" }}>
+          <p
+            className="font-mono"
+            style={{ color: "#3f3f46", fontSize: "clamp(11px, 1.04vw, 20px)" }}
+          >
             {totalVotes} vote{totalVotes !== 1 ? "s" : ""}
           </p>
         )}
@@ -2009,9 +2066,27 @@ export default function DisplayPage() {
 
   // Status-driven styling for the voting pill (matches the scoreboard's card language).
   const voteStyle = {
-    open:   { color: "#4ade80", label: "Open",   bg: "rgba(20,60,33,0.35)", border: "rgba(74,222,128,0.55)", glow: "0 0 2.2vw rgba(74,222,128,0.28), 0 0.42vw 2.6vw rgba(0,0,0,0.55)" },
-    closed: { color: "#a1a1aa", label: "Closed", bg: "rgba(28,28,32,0.65)", border: "rgba(113,113,122,0.5)",  glow: "0 0.42vw 2.6vw rgba(0,0,0,0.55)" },
-    locked: { color: "#f59e0b", label: "Locked", bg: "rgba(61,40,4,0.35)",  border: "rgba(245,158,11,0.5)",   glow: "0 0 2.2vw rgba(245,158,11,0.22), 0 0.42vw 2.6vw rgba(0,0,0,0.55)" },
+    open: {
+      color: "#4ade80",
+      label: "Open",
+      bg: "rgba(20,60,33,0.35)",
+      border: "rgba(74,222,128,0.55)",
+      glow: "0 0 2.2vw rgba(74,222,128,0.28), 0 0.42vw 2.6vw rgba(0,0,0,0.55)",
+    },
+    closed: {
+      color: "#a1a1aa",
+      label: "Closed",
+      bg: "rgba(28,28,32,0.65)",
+      border: "rgba(113,113,122,0.5)",
+      glow: "0 0.42vw 2.6vw rgba(0,0,0,0.55)",
+    },
+    locked: {
+      color: "#f59e0b",
+      label: "Locked",
+      bg: "rgba(61,40,4,0.35)",
+      border: "rgba(245,158,11,0.5)",
+      glow: "0 0 2.2vw rgba(245,158,11,0.22), 0 0.42vw 2.6vw rgba(0,0,0,0.55)",
+    },
   }[votingStatus];
 
   return (
@@ -2080,13 +2155,19 @@ export default function DisplayPage() {
               <div className="flex flex-col" style={{ gap: "0.1vw" }}>
                 <span
                   className="font-display font-bold uppercase tracking-widest leading-none"
-                  style={{ color: "#71717a", fontSize: "clamp(11px, 1vw, 20px)" }}
+                  style={{
+                    color: "#ffffff",
+                    fontSize: "clamp(11px, 1vw, 20px)",
+                  }}
                 >
                   Voting
                 </span>
                 <span
                   className="font-display font-black uppercase leading-none"
-                  style={{ color: voteStyle.color, fontSize: "clamp(22px, 2.7vw, 56px)" }}
+                  style={{
+                    color: voteStyle.color,
+                    fontSize: "clamp(22px, 2.7vw, 56px)",
+                  }}
                 >
                   {voteStyle.label}
                 </span>
@@ -2094,15 +2175,22 @@ export default function DisplayPage() {
             </div>
             {/* Banter timer — sits directly below the voting status pill */}
             {isTimerRunning && (
-              <div className="absolute animate-fade-in" style={{ top: "calc(100% + 0.6vw)", left: 0, right: 0 }}>
+              <div
+                className="absolute animate-fade-in"
+                style={{ top: "calc(100% + 0.6vw)", left: 0, right: 0 }}
+              >
                 <div
                   className="flex items-center justify-center"
                   style={{
                     padding: "0.5vw 1.2vw",
                     borderRadius: "1vw",
-                    backgroundColor: timerUrgent ? "rgba(25,4,4,0.96)" : "rgba(8,8,10,0.96)",
+                    backgroundColor: timerUrgent
+                      ? "rgba(25,4,4,0.96)"
+                      : "rgba(8,8,10,0.96)",
                     border: `2px solid ${timerUrgent ? "#f87171" : "#f59e0b"}`,
-                    boxShadow: timerUrgent ? "0 0 1.5vw rgba(248,113,113,0.25)" : "0 0 1.5vw rgba(245,158,11,0.15)",
+                    boxShadow: timerUrgent
+                      ? "0 0 1.5vw rgba(248,113,113,0.25)"
+                      : "0 0 1.5vw rgba(245,158,11,0.15)",
                   }}
                 >
                   <span
@@ -2110,7 +2198,9 @@ export default function DisplayPage() {
                     style={{
                       fontSize: "clamp(22px, 3vw, 60px)",
                       color: timerUrgent ? "#f87171" : "#f59e0b",
-                      textShadow: timerUrgent ? "0 0 1vw rgba(248,113,113,0.5)" : "0 0 1vw rgba(245,158,11,0.3)",
+                      textShadow: timerUrgent
+                        ? "0 0 1vw rgba(248,113,113,0.5)"
+                        : "0 0 1vw rgba(245,158,11,0.3)",
                     }}
                   >
                     {timerMins}:{timerSecs}
