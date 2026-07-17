@@ -1606,6 +1606,36 @@ export default function OperatorPage() {
             <div className="shrink-0">
               <h1 className="font-mono text-lg font-bold tracking-widest" style={{ color: '#f59e0b' }}>LIE HARD</h1>
               <p className="font-mono text-xs uppercase tracking-widest" style={{ color: '#3f3f46' }}>OPERATOR PANEL</p>
+              {/* Jump to any phase at will (show must be started so segment data is loaded). */}
+              {gameState.phase !== 'SETUP' && (
+                <select
+                  value=""
+                  onChange={(e) => {
+                    const target = e.target.value as GameState['phase'];
+                    if (!target || target === currentPhase) return;
+                    if (!confirm(`Jump to ${PHASE_LABELS[target]}? The display and phones switch immediately.`)) return;
+                    send(OP.GOTO_PHASE, { phase: target });
+                    if (target === 'FINAL') send(OP.TOGGLE_DISPLAY, { key: 'showLeaderboardModal', value: true });
+                  }}
+                  className="mt-2 font-mono text-xs px-2 py-1 rounded cursor-pointer focus:outline-none"
+                  style={{ backgroundColor: '#18181b', border: '1px solid #f59e0b', color: '#f59e0b' }}
+                >
+                  <option value="">Jump to phase…</option>
+                  {PHASE_ORDER.filter((p) => p !== currentPhase).map((p) => {
+                    const total = gameState.players.length;
+                    const done = total > 0 && (
+                      p === 'SEGMENT1' ? gameState.segment1.completedStorytellers.length === total :
+                      p === 'SEGMENT2' ? gameState.segment2.completedStorytellers.length === total :
+                      p === 'SEGMENT3' ? gameState.segment3.showResult : false
+                    );
+                    return (
+                      <option key={p} value={p} style={{ color: '#e4e4e7', backgroundColor: '#18181b' }}>
+                        {PHASE_LABELS[p]}{done ? ' ✓ done' : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+              )}
             </div>
 
             {/* Phase stepper */}
