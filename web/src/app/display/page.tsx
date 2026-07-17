@@ -1696,7 +1696,7 @@ function Segment3Screen({ gameState }: { gameState: GameState }) {
   return (
     <div className="w-full h-full flex" style={{ backgroundColor: "#08080a" }}>
       {/* Left — object photo */}
-      <div className="w-1/2 h-full relative">
+      <div className="w-2/5 h-full relative">
         {segment3.photoUrl ? (
           <img
             src={segment3.photoUrl}
@@ -1740,7 +1740,7 @@ function Segment3Screen({ gameState }: { gameState: GameState }) {
 
       {/* Right — player claims (statements are the hero; votes are secondary) */}
       <div
-        className="w-1/2 h-full flex flex-col justify-center overflow-hidden"
+        className="w-3/5 h-full flex flex-col justify-center overflow-hidden"
         style={{
           borderLeft: "1px solid rgba(245,158,11,0.2)",
           padding: "0 3.33vw",
@@ -1763,52 +1763,46 @@ function Segment3Screen({ gameState }: { gameState: GameState }) {
             // Match Round 1's statement size; scale down as the player count grows.
             const stmtFont = players.length <= 3 ? "clamp(18px, 2.71vw, 52px)" : players.length === 4 ? "clamp(16px, 2.2vw, 44px)" : "clamp(14px, 1.9vw, 38px)";
             return (
-              <div key={player.id} className="flex items-start" style={{ gap: "1.04vw" }}>
-                <img
-                  src={player.photo}
-                  alt={player.name}
-                  className="rounded-full object-cover shrink-0"
-                  style={{ width: "5.5vw", height: "5.5vw", border: "2px solid rgba(245,158,11,0.25)" }}
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline justify-between" style={{ gap: "1vw" }}>
-                    <span className="font-display font-bold text-white" style={{ fontSize: "clamp(18px, 1.9vw, 40px)" }}>
-                      {player.name}
-                    </span>
-                    {showVotes && (
-                      <span className="font-display font-bold shrink-0" style={{ color: "#a1a1aa", fontSize: "clamp(14px, 1.4vw, 28px)" }}>
-                        {count} · {pct}%
-                      </span>
-                    )}
-                  </div>
-                  {/* Statement box — same look as Round 1 (gold border, white text), gold border in both states */}
-                  <div
-                    className="rounded-3xl w-full overflow-hidden"
-                    style={{ border: "2px solid #f59e0b", backgroundColor: "rgba(13,13,15,0.97)", marginTop: "0.5vw" }}
-                  >
-                    {shown ? (
-                      <div style={{ padding: "clamp(10px, 1.5vw, 30px) clamp(14px, 2vw, 40px)" }}>
-                        <p className="font-display leading-tight" style={{ fontSize: stmtFont, color: "#ffffff" }}>
-                          {statement || "—"}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center" style={{ padding: "clamp(14px, 2vw, 40px)" }}>
-                        <p className="font-display uppercase tracking-widest" style={{ fontSize: "clamp(13px, 1.5vw, 30px)", color: "#3f3f46" }}>
-                          Hidden
-                        </p>
-                      </div>
-                    )}
-                  </div>
+              <div key={player.id} className="flex flex-col" style={{ gap: "0.4vw" }}>
+                {/* Horizontal claim card — photo + name + statement side by side (wide, not tall), Round-1 gold box */}
+                <div
+                  className="rounded-3xl w-full overflow-hidden flex items-center"
+                  style={{
+                    border: "2px solid #f59e0b",
+                    backgroundColor: "rgba(13,13,15,0.97)",
+                    padding: "clamp(8px, 1vw, 20px) clamp(12px, 1.6vw, 32px)",
+                    gap: "clamp(10px, 1.2vw, 24px)",
+                  }}
+                >
+                  <img
+                    src={player.photo}
+                    alt={player.name}
+                    className="rounded-full object-cover shrink-0"
+                    style={{ width: "clamp(44px, 4.5vw, 92px)", height: "clamp(44px, 4.5vw, 92px)", border: "2px solid rgba(245,158,11,0.4)" }}
+                  />
+                  <span className="font-display font-bold text-white shrink-0" style={{ fontSize: "clamp(16px, 1.7vw, 36px)" }}>
+                    {player.name}
+                  </span>
+                  {shown ? (
+                    <p className="font-display leading-tight flex-1 min-w-0" style={{ fontSize: stmtFont, color: "#ffffff" }}>
+                      {statement || "—"}
+                    </p>
+                  ) : (
+                    <p className="font-display uppercase tracking-widest flex-1 min-w-0" style={{ fontSize: "clamp(13px, 1.4vw, 28px)", color: "#3f3f46" }}>
+                      Hidden
+                    </p>
+                  )}
                   {showVotes && (
-                    <div
-                      className="w-full rounded-full overflow-hidden"
-                      style={{ height: "clamp(6px, 0.9vw, 16px)", backgroundColor: "#18181b", marginTop: "0.5vw" }}
-                    >
-                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: "#f59e0b" }} />
-                    </div>
+                    <span className="font-display font-bold shrink-0" style={{ color: "#a1a1aa", fontSize: "clamp(14px, 1.5vw, 30px)" }}>
+                      {count} · {pct}%
+                    </span>
                   )}
                 </div>
+                {showVotes && (
+                  <div className="w-full rounded-full overflow-hidden" style={{ height: "clamp(6px, 0.9vw, 16px)", backgroundColor: "#18181b" }}>
+                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: "#f59e0b" }} />
+                  </div>
+                )}
               </div>
             );
           })}
