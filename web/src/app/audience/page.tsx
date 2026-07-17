@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { doc, onSnapshot } from 'firebase/firestore';
 import {
   GoogleAuthProvider, onAuthStateChanged, signInWithPopup,
+  signInWithRedirect, getRedirectResult,
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
   signOut, User,
 } from 'firebase/auth';
@@ -104,6 +105,13 @@ export default function AudiencePage() {
     return () => unsub();
   }, []);
 
+  // Surface any error from a redirect-based Google sign-in (mobile fallback).
+  useEffect(() => {
+    getRedirectResult(auth).catch((e: unknown) => {
+      setAuthError(e instanceof Error ? e.message : 'Sign-in failed. Try again.');
+    });
+  }, []);
+
   // ── Voter doc lookup (real-time — detects remote deletion) ──────────────
 
   useEffect(() => {
@@ -132,10 +140,22 @@ export default function AudiencePage() {
     setAuthError('');
     if (!termsAccepted) { setAuthError('Please accept the Terms & Privacy Policy first.'); return; }
     setSigningIn(true);
+    const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, new GoogleAuthProvider());
+      await signInWithPopup(auth, provider);
     } catch (e: unknown) {
-      setAuthError(e instanceof Error ? e.message : 'Sign-in failed. Try again.');
+      const code = (e as { code?: string })?.code ?? '';
+      // Popups are commonly blocked on phones / in-app browsers — fall back to a full-page redirect.
+      if (code === 'auth/popup-blocked' || code === 'auth/cancelled-popup-request' || code === 'auth/operation-not-supported-in-this-environment') {
+        try {
+          await signInWithRedirect(auth, provider);
+          return; // page navigates to Google and back
+        } catch (e2: unknown) {
+          setAuthError(e2 instanceof Error ? e2.message : 'Sign-in failed. Try again.');
+        }
+      } else if (code !== 'auth/popup-closed-by-user') {
+        setAuthError(e instanceof Error ? e.message : 'Sign-in failed. Try again.');
+      }
     } finally {
       setSigningIn(false);
     }
