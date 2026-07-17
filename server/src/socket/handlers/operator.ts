@@ -75,6 +75,18 @@ export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): vo
     apply(R.toggleStatement(store.getState(), d.index)),
   );
 
+  on(OP.EDIT_SEG1, S.editSeg1Schema, (d) =>
+    apply(R.editSeg1Statement(store.getState(), d.playerId, d.statement, d.isLie)),
+  );
+
+  on(OP.EDIT_SEG2, S.editSeg2Schema, (d) =>
+    apply(R.editSeg2Statement(store.getState(), d.playerId, d.statements, d.lieIndex)),
+  );
+
+  on(OP.EDIT_SEG3, S.editSeg3Schema, (d) =>
+    apply(R.editSeg3Object(store.getState(), d.photoUrl, d.photoTitle)),
+  );
+
   on(OP.AWARD_SEGMENT, S.awardSegmentSchema, (d) => apply(R.awardSegment(store.getState(), d.segment)));
 
   on(OP.AWARD_SEGMENT3, S.awardSegment3Schema, (d) =>

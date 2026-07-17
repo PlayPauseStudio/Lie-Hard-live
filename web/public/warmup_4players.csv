@@ -1,0 +1,6 @@
+# answer = the on-screen answer for this statement: write TRUTH if it is true, LIE if it is the lie. Shows exactly this, never flipped. (This # line is ignored by the upload.)
+statement,answer
+"I have visited another country",TRUTH
+"I have never used WhatsApp",LIE
+"Bananas are berries",TRUTH
+"Octopuses have three hearts",TRUTH

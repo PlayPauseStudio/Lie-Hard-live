@@ -155,6 +155,50 @@ export function toggleStatement(state: GameState, index: number): Patch {
   return { segment2: { ...state.segment2, revealedStatements: next } };
 }
 
+// ── Live content edits (operator fixes a statement/answer/object mid-show) ─────
+
+export function editSeg1Statement(
+  state: GameState,
+  playerId: number,
+  statement: string,
+  isLie: boolean,
+): Patch {
+  return {
+    segment1: {
+      ...state.segment1,
+      statements: state.segment1.statements.map((s) =>
+        s.playerId === playerId ? { ...s, statement, isLie } : s,
+      ),
+    },
+  };
+}
+
+export function editSeg2Statement(
+  state: GameState,
+  playerId: number,
+  statements: string[],
+  lieIndex: number,
+): Patch {
+  // Clamp the lie index into the (possibly resized) statements array.
+  const safeLie = Math.max(0, Math.min(lieIndex, statements.length - 1));
+  return {
+    segment2: {
+      ...state.segment2,
+      statements: state.segment2.statements.map((s) =>
+        s.playerId === playerId ? { ...s, statements, lieIndex: safeLie } : s,
+      ),
+    },
+  };
+}
+
+export function editSeg3Object(
+  state: GameState,
+  photoUrl: string | null,
+  photoTitle: string | null,
+): Patch {
+  return { segment3: { ...state.segment3, photoUrl, photoTitle } };
+}
+
 // ── Award points (seg1 / seg2) ───────────────────────────────────────────────
 
 export function awardSegment(state: GameState, segment: SegmentKey): Patch {

@@ -1,0 +1,6 @@
+# answer = TRUTH if the statement is true, LIE if it is the lie. One row per player. Shown exactly as typed. (This # line is ignored by the upload.)
+player_id,player_name,statement,answer
+1,Aarav,"I can solve a Rubik's Cube",TRUTH
+2,Diya,"I have never eaten pizza",LIE
+3,Kabir,"I have gone scuba diving",TRUTH
+4,Meera,"I own a pet tiger",LIE

@@ -75,6 +75,20 @@ export const setPlayerVoteSchema = z.object({
   vote: z.string().max(40),
 });
 export const toggleStatementSchema = z.object({ index: z.number().int().min(0).max(20) });
+export const editSeg1Schema = z.object({
+  playerId: z.number().int(),
+  statement: shortStr,
+  isLie: z.boolean(),
+});
+export const editSeg2Schema = z.object({
+  playerId: z.number().int(),
+  statements: z.array(shortStr).min(1).max(8),
+  lieIndex: z.number().int().min(0),
+});
+export const editSeg3Schema = z.object({
+  photoUrl: photoStr.nullable(),
+  photoTitle: z.string().max(200).nullable(),
+});
 export const awardSegmentSchema = z.object({ segment: segmentKey });
 export const awardSegment3Schema = z.object({ winnerId: z.number().int() });
 export const adjustScoreSchema = z.object({

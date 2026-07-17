@@ -240,6 +240,16 @@ export default function OperatorPage() {
   const [seg2Awarded, setSeg2Awarded] = useState(false);
 
   const [seg3ManualWinnerId, setSeg3ManualWinnerId] = useState<number | null>(null);
+
+  // Live content editing — fix a statement / answer / object mid-show.
+  const [editSeg1, setEditSeg1] = useState(false);
+  const [seg1Draft, setSeg1Draft] = useState<{ statement: string; isLie: boolean }>({ statement: '', isLie: false });
+  const [editSeg2, setEditSeg2] = useState(false);
+  const [seg2Draft, setSeg2Draft] = useState<{ statements: string[]; lieIndex: number }>({ statements: [], lieIndex: 0 });
+  const [editSeg3, setEditSeg3] = useState(false);
+  const [seg3EditPhoto, setSeg3EditPhoto] = useState<string>('');
+  const [seg3EditTitle, setSeg3EditTitle] = useState<string>('');
+
   const [origin, setOrigin] = useState('');
 
   useEffect(() => { setOrigin(window.location.origin); }, []);
@@ -253,11 +263,13 @@ export default function OperatorPage() {
   useEffect(() => {
     setSeg1Preview(null);
     setSeg1Awarded(false);
+    setEditSeg1(false);
   }, [gameState?.segment1?.currentStorytellerId]);
 
   useEffect(() => {
     setSeg2Preview(null);
     setSeg2Awarded(false);
+    setEditSeg2(false);
   }, [gameState?.segment2?.currentStorytellerId]);
 
   // Compute local display seconds from Firestore timer state
@@ -1126,14 +1138,72 @@ export default function OperatorPage() {
             {/* Left col: statement + player votes */}
             <div className="space-y-5">
               <div className="rounded-xl p-5" style={{ backgroundColor: '#0d0d0f', border: '1px solid #27272a' }}>
-                <p className="font-mono text-xs uppercase tracking-widest mb-3" style={{ color: '#52525b' }}>STATEMENT</p>
-                <p className="text-lg leading-relaxed" style={{ color: '#fafafa' }}>{stmtObj.statement}</p>
-                <div className="mt-4 pt-4" style={{ borderTop: '1px solid #27272a' }}>
-                  <span className="font-mono text-sm font-bold px-3 py-1 rounded"
-                    style={{ backgroundColor: stmtObj.isLie ? '#450a0a' : '#052e16', color: stmtObj.isLie ? '#f87171' : '#4ade80' }}>
-                    ANSWER: {stmtObj.isLie ? 'LIE' : 'TRUTH'}
-                  </span>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-mono text-xs uppercase tracking-widest" style={{ color: '#52525b' }}>STATEMENT</p>
+                  {!editSeg1 && (
+                    <button
+                      onClick={() => { setSeg1Draft({ statement: stmtObj.statement, isLie: stmtObj.isLie }); setEditSeg1(true); }}
+                      className="font-mono text-xs font-bold px-2 py-1 rounded transition-colors"
+                      style={{ backgroundColor: '#1a1a1a', color: '#f59e0b', border: '1px solid #78350f' }}>
+                      ✎ EDIT
+                    </button>
+                  )}
                 </div>
+                {!editSeg1 ? (
+                  <>
+                    <p className="text-lg leading-relaxed" style={{ color: '#fafafa' }}>{stmtObj.statement}</p>
+                    <div className="mt-4 pt-4" style={{ borderTop: '1px solid #27272a' }}>
+                      <span className="font-mono text-sm font-bold px-3 py-1 rounded"
+                        style={{ backgroundColor: stmtObj.isLie ? '#450a0a' : '#052e16', color: stmtObj.isLie ? '#f87171' : '#4ade80' }}>
+                        ANSWER: {stmtObj.isLie ? 'LIE' : 'TRUTH'}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-3">
+                    <textarea
+                      value={seg1Draft.statement}
+                      onChange={(e) => setSeg1Draft((d) => ({ ...d, statement: e.target.value }))}
+                      rows={3}
+                      className="w-full px-3 py-2 rounded font-mono text-sm focus:outline-none resize-none"
+                      style={{ backgroundColor: '#09090b', border: '1px solid #3f3f46', color: '#fafafa' }}
+                    />
+                    <div className="flex gap-2">
+                      {(['TRUTH', 'LIE'] as const).map((opt) => {
+                        const isLieOpt = opt === 'LIE';
+                        const active = seg1Draft.isLie === isLieOpt;
+                        return (
+                          <button key={opt}
+                            onClick={() => setSeg1Draft((d) => ({ ...d, isLie: isLieOpt }))}
+                            className="flex-1 py-2 rounded-lg font-mono text-sm font-bold transition-colors"
+                            style={{
+                              backgroundColor: active ? (isLieOpt ? '#450a0a' : '#052e16') : '#27272a',
+                              color: active ? (isLieOpt ? '#f87171' : '#4ade80') : '#71717a',
+                              border: `1px solid ${active ? (isLieOpt ? '#7f1d1d' : '#166534') : '#3f3f46'}`,
+                            }}>
+                            ANSWER: {opt}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        onClick={() => {
+                          send(OP.EDIT_SEG1, { playerId: segment1.currentStorytellerId!, statement: seg1Draft.statement.trim(), isLie: seg1Draft.isLie });
+                          setEditSeg1(false);
+                        }}
+                        className="flex-1 py-2 rounded-lg font-mono text-sm font-bold uppercase tracking-widest"
+                        style={{ backgroundColor: '#f59e0b', color: '#09090b' }}>
+                        Save
+                      </button>
+                      <button onClick={() => setEditSeg1(false)}
+                        className="px-4 py-2 rounded-lg font-mono text-sm font-bold"
+                        style={{ backgroundColor: '#27272a', color: '#a1a1aa', border: '1px solid #3f3f46' }}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -1237,42 +1307,98 @@ export default function OperatorPage() {
           <div className="grid grid-cols-2 gap-6">
             {/* Left col: statements + player votes */}
             <div className="space-y-5">
-              {(() => {
-                const STMT_PALETTE = ['#fbbf24', '#a78bfa', '#34d399', '#60a5fa', '#f472b6'];
-                const revealed = segment2.revealedStatements ?? [];
-                return (
-                  <div className="grid grid-cols-2 gap-3">
-                    {stmtObj.statements.map((stmt, i) => {
-                      const color = STMT_PALETTE[i % STMT_PALETTE.length];
-                      const isRevealed = revealed.includes(i);
-                      return (
-                        <div key={i} className="rounded-xl p-4 space-y-3" style={{ border: `1px solid ${isRevealed ? color + '66' : '#3f3f46'}`, backgroundColor: '#0d0d0f' }}>
-                          <div className="flex items-center justify-between">
-                            <p className="font-mono text-sm font-bold" style={{ color }}>{`STATEMENT ${i + 1}${i === stmtObj.lieIndex ? ' ★ LIE' : ''}`}</p>
-                            <button
-                              onClick={() => {
-                                send(OP.TOGGLE_STATEMENT, { index: i });
-                              }}
-                              className="font-mono text-xs font-bold px-2 py-1 rounded transition-colors"
-                              style={{
-                                backgroundColor: isRevealed ? '#052e16' : '#1a1a1a',
-                                color: isRevealed ? '#4ade80' : '#71717a',
-                                border: `1px solid ${isRevealed ? '#166534' : '#3f3f46'}`,
-                              }}>
-                              {isRevealed ? 'SHOWN' : 'SHOW'}
-                            </button>
-                          </div>
-                          <p className="text-base leading-relaxed" style={{ color: '#fafafa' }}>{stmt}</p>
-                        </div>
-                      );
-                    })}
+              {!editSeg2 ? (
+                <>
+                  {(() => {
+                    const STMT_PALETTE = ['#fbbf24', '#a78bfa', '#34d399', '#60a5fa', '#f472b6'];
+                    const revealed = segment2.revealedStatements ?? [];
+                    return (
+                      <div className="grid grid-cols-2 gap-3">
+                        {stmtObj.statements.map((stmt, i) => {
+                          const color = STMT_PALETTE[i % STMT_PALETTE.length];
+                          const isRevealed = revealed.includes(i);
+                          return (
+                            <div key={i} className="rounded-xl p-4 space-y-3" style={{ border: `1px solid ${isRevealed ? color + '66' : '#3f3f46'}`, backgroundColor: '#0d0d0f' }}>
+                              <div className="flex items-center justify-between">
+                                <p className="font-mono text-sm font-bold" style={{ color }}>{`STATEMENT ${i + 1}${i === stmtObj.lieIndex ? ' ★ LIE' : ''}`}</p>
+                                <button
+                                  onClick={() => {
+                                    send(OP.TOGGLE_STATEMENT, { index: i });
+                                  }}
+                                  className="font-mono text-xs font-bold px-2 py-1 rounded transition-colors"
+                                  style={{
+                                    backgroundColor: isRevealed ? '#052e16' : '#1a1a1a',
+                                    color: isRevealed ? '#4ade80' : '#71717a',
+                                    border: `1px solid ${isRevealed ? '#166534' : '#3f3f46'}`,
+                                  }}>
+                                  {isRevealed ? 'SHOWN' : 'SHOW'}
+                                </button>
+                              </div>
+                              <p className="text-base leading-relaxed" style={{ color: '#fafafa' }}>{stmt}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="font-mono text-sm font-bold px-3 py-1.5 rounded inline-block"
+                      style={{ backgroundColor: '#1c0a00', color: '#f59e0b', border: '1px solid #78350f' }}>
+                      LIE IS STATEMENT {stmtObj.lieIndex + 1}
+                    </span>
+                    <button
+                      onClick={() => { setSeg2Draft({ statements: [...stmtObj.statements], lieIndex: stmtObj.lieIndex }); setEditSeg2(true); }}
+                      className="font-mono text-xs font-bold px-2 py-1 rounded transition-colors"
+                      style={{ backgroundColor: '#1a1a1a', color: '#f59e0b', border: '1px solid #78350f' }}>
+                      ✎ EDIT STATEMENTS
+                    </button>
                   </div>
-                );
-              })()}
-              <span className="font-mono text-sm font-bold px-3 py-1.5 rounded inline-block"
-                style={{ backgroundColor: '#1c0a00', color: '#f59e0b', border: '1px solid #78350f' }}>
-                LIE IS STATEMENT {stmtObj.lieIndex + 1}
-              </span>
+                </>
+              ) : (
+                <div className="rounded-xl p-4 space-y-3" style={{ border: '1px solid #78350f', backgroundColor: '#0d0d0f' }}>
+                  <p className="font-mono text-xs uppercase tracking-widest" style={{ color: '#f59e0b' }}>EDIT STATEMENTS</p>
+                  {seg2Draft.statements.map((s, i) => (
+                    <div key={i} className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs font-bold" style={{ color: '#71717a' }}>STATEMENT {i + 1}</span>
+                        <button
+                          onClick={() => setSeg2Draft((d) => ({ ...d, lieIndex: i }))}
+                          className="font-mono text-xs font-bold px-2 py-1 rounded transition-colors"
+                          style={{
+                            backgroundColor: seg2Draft.lieIndex === i ? '#1c0a00' : '#27272a',
+                            color: seg2Draft.lieIndex === i ? '#f59e0b' : '#71717a',
+                            border: `1px solid ${seg2Draft.lieIndex === i ? '#78350f' : '#3f3f46'}`,
+                          }}>
+                          {seg2Draft.lieIndex === i ? '★ THE LIE' : 'MARK AS LIE'}
+                        </button>
+                      </div>
+                      <textarea
+                        value={s}
+                        onChange={(e) => setSeg2Draft((d) => ({ ...d, statements: d.statements.map((x, j) => (j === i ? e.target.value : x)) }))}
+                        rows={2}
+                        className="w-full px-3 py-2 rounded font-mono text-sm focus:outline-none resize-none"
+                        style={{ backgroundColor: '#09090b', border: '1px solid #3f3f46', color: '#fafafa' }}
+                      />
+                    </div>
+                  ))}
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => {
+                        send(OP.EDIT_SEG2, { playerId: segment2.currentStorytellerId!, statements: seg2Draft.statements.map((s) => s.trim()), lieIndex: seg2Draft.lieIndex });
+                        setEditSeg2(false);
+                      }}
+                      className="flex-1 py-2 rounded-lg font-mono text-sm font-bold uppercase tracking-widest"
+                      style={{ backgroundColor: '#f59e0b', color: '#09090b' }}>
+                      Save
+                    </button>
+                    <button onClick={() => setEditSeg2(false)}
+                      className="px-4 py-2 rounded-lg font-mono text-sm font-bold"
+                      style={{ backgroundColor: '#27272a', color: '#a1a1aa', border: '1px solid #3f3f46' }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <p className="font-mono text-sm uppercase tracking-widest mb-4" style={{ color: '#52525b' }}>Log Player Votes</p>
@@ -1399,10 +1525,60 @@ export default function OperatorPage() {
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-5 items-start">
           <div className="rounded-xl p-5" style={{ backgroundColor: '#0d0d0f', border: '1px solid #27272a' }}>
-            {segment3.photoUrl && (
-              <img src={segment3.photoUrl} alt={segment3.photoTitle ?? ''} className="h-36 rounded-lg object-cover w-full" />
+            {!editSeg3 ? (
+              <>
+                {segment3.photoUrl && (
+                  <img src={segment3.photoUrl} alt={segment3.photoTitle ?? ''} className="h-36 rounded-lg object-cover w-full" />
+                )}
+                {segment3.photoTitle && (
+                  <p className="font-mono text-base font-bold mt-2" style={{ color: '#e4e4e7' }}>{segment3.photoTitle}</p>
+                )}
+                <div className="flex items-center justify-between mt-3">
+                  <p className="font-mono text-sm" style={{ color: '#4ade80' }}>● Showing on display screen</p>
+                  <button
+                    onClick={() => { setSeg3EditPhoto(segment3.photoUrl ?? ''); setSeg3EditTitle(segment3.photoTitle ?? ''); setEditSeg3(true); }}
+                    className="font-mono text-xs font-bold px-2 py-1 rounded transition-colors"
+                    style={{ backgroundColor: '#1a1a1a', color: '#f59e0b', border: '1px solid #78350f' }}>
+                    ✎ EDIT
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-3">
+                <p className="font-mono text-xs uppercase tracking-widest" style={{ color: '#f59e0b' }}>EDIT OBJECT</p>
+                {seg3EditPhoto && (
+                  <img src={seg3EditPhoto} alt="Object preview" className="h-28 rounded-lg object-cover w-full" style={{ border: '1px solid #3f3f46' }} />
+                )}
+                <input
+                  type="file" accept="image/*"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) loadPhotoAsBase64(f, setSeg3EditPhoto); }}
+                  className="w-full font-mono text-xs" style={{ color: '#a1a1aa' }}
+                />
+                <input
+                  type="text" value={seg3EditTitle}
+                  onChange={(e) => setSeg3EditTitle(e.target.value)}
+                  placeholder="Object name"
+                  className="w-full px-3 py-2 rounded font-mono text-sm focus:outline-none"
+                  style={{ backgroundColor: '#09090b', border: '1px solid #3f3f46', color: '#fafafa' }}
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      send(OP.EDIT_SEG3, { photoUrl: seg3EditPhoto || null, photoTitle: seg3EditTitle.trim() || null });
+                      setEditSeg3(false);
+                    }}
+                    className="flex-1 py-2 rounded-lg font-mono text-sm font-bold uppercase tracking-widest"
+                    style={{ backgroundColor: '#f59e0b', color: '#09090b' }}>
+                    Save
+                  </button>
+                  <button onClick={() => setEditSeg3(false)}
+                    className="px-4 py-2 rounded-lg font-mono text-sm font-bold"
+                    style={{ backgroundColor: '#27272a', color: '#a1a1aa', border: '1px solid #3f3f46' }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
             )}
-            <p className="font-mono text-sm mt-3" style={{ color: '#4ade80' }}>● Showing on display screen</p>
           </div>
           <div>
             <p className="font-mono text-sm uppercase tracking-widest mb-2" style={{ color: '#52525b' }}>Audience Vote</p>

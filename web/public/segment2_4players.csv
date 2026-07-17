@@ -1,0 +1,10 @@
+# answer = TRUTH or LIE. Each player has several statements; exactly ONE row per player is LIE. Shown exactly as typed. (This # line is ignored by the upload.)
+player_id,player_name,statement,answer
+1,Aarav,"I have ridden a horse",TRUTH
+1,Aarav,"I have been to Antarctica",LIE
+2,Diya,"I can speak three languages",TRUTH
+2,Diya,"I have climbed Mount Everest",LIE
+3,Kabir,"I know how to swim",TRUTH
+3,Kabir,"I have never seen a car",LIE
+4,Meera,"I have watched a live cricket match",TRUTH
+4,Meera,"I have a pet elephant",LIE
