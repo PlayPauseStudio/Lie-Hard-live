@@ -1,7 +1,7 @@
 import { createServer } from 'http';
 import { env } from './config/env';
 import { logger } from './util/logger';
-import { initFirebaseAdmin } from './auth/firebaseAdmin';
+import { initFirebaseAdmin, getFirestore } from './auth/firebaseAdmin';
 import { RoomStore } from './game/store';
 import { SnapshotStore } from './persistence/snapshot';
 import { GameMirror } from './persistence/gameMirror';
@@ -26,6 +26,19 @@ async function main(): Promise<void> {
   const app = buildApp(() => store.version);
   const httpServer = createServer(app);
   const { broadcaster } = createIo(httpServer, store, mirror);
+
+  // Failover: while control/mode.backupMode is on, pause the mirror so the
+  // no-server backup operator owns gameState/live (either operator can flip it).
+  const controlFs = getFirestore();
+  if (controlFs) {
+    controlFs
+      .collection('control')
+      .doc('mode')
+      .onSnapshot(
+        (snap) => mirror.setPaused(snap.exists ? Boolean(snap.data()?.backupMode) : false),
+        (err) => logger.warn({ err: err.message }, 'control/mode listener error'),
+      );
+  }
 
   // Periodic snapshot of authoritative state.
   const snapTimer = setInterval(() => void snapshots.save(store.snapshot()), env.SNAPSHOT_INTERVAL_MS);

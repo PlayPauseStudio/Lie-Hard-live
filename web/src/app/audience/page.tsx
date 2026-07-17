@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import {
   GoogleAuthProvider,
   onAuthStateChanged,
@@ -154,16 +154,59 @@ export default function AudiencePage() {
   const [regError, setRegError] = useState("");
   const [registering, setRegistering] = useState(false);
 
+  // Failover: control/mode.backupMode. Normally we use the secure WebSocket; on
+  // backup mode we read state from and vote to Firestore directly — staying on
+  // this same URL so the audience never has to sign in again.
+  const [backupMode, setBackupMode] = useState(false);
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "control", "mode"), (snap) => {
+      setBackupMode(snap.exists() ? Boolean(snap.data()?.backupMode) : false);
+    });
+    return () => unsub();
+  }, []);
+
+  // Browser online status drives the "Reconnecting…" banner in backup mode.
+  const [online, setOnline] = useState(true);
+  useEffect(() => {
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    if (typeof navigator !== "undefined") setOnline(navigator.onLine);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => {
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", off);
+    };
+  }, []);
+
   // Game / voting — authoritative state over WebSocket (audience role).
   const getToken = useCallback(
     () =>
       auth.currentUser ? auth.currentUser.getIdToken() : Promise.resolve(null),
     [],
   );
-  const { gameState, emit, connected } = useGameState<GameState>("audience", {
+  const {
+    gameState: socketState,
+    emit,
+    connected: socketConnected,
+  } = useGameState<GameState>("audience", {
     getToken,
-    enabled: !!user,
+    enabled: !!user && !backupMode,
   });
+
+  // Firestore game state — used only in backup mode (server paused/down).
+  const [firestoreState, setFirestoreState] = useState<GameState | null>(null);
+  useEffect(() => {
+    if (!backupMode) return;
+    const unsub = onSnapshot(doc(db, "gameState", "live"), (snap) => {
+      if (snap.exists()) setFirestoreState(snap.data() as GameState);
+    });
+    return () => unsub();
+  }, [backupMode]);
+
+  const gameState = backupMode ? firestoreState : socketState;
+  const connected = backupMode ? online : socketConnected;
+
   const [myVote, setMyVote] = useState<{
     choice: string;
     votingRound: string;
@@ -342,6 +385,23 @@ export default function AudiencePage() {
     setSubmitting(true);
     setVoteError("");
     try {
+      if (backupMode) {
+        // Failover: vote straight to Firestore, exactly like the backup audience.
+        const votingRound = getCurrentVotingRound(gameState);
+        if (!votingRound) {
+          setVoteError("Voting is not open right now.");
+          return;
+        }
+        await updateDoc(doc(db, "gameState", "live"), {
+          [`audienceVotes.${user.uid}`]: {
+            choice,
+            votingRound,
+            displayName: voterDoc.name,
+          },
+        });
+        setMyVote({ choice, votingRound });
+        return;
+      }
       // The server derives the round, validates it's open, and dedupes per uid.
       const ack = await emit(AUD.VOTE, { choice });
       if (ack.ok && ack.votingRound) {

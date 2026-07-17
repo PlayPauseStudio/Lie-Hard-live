@@ -20,6 +20,7 @@ export class GameMirror {
   private pending: GameState | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private writing = false;
+  private paused = false;
 
   constructor(private readonly throttleMs = 1000) {}
 
@@ -27,9 +28,27 @@ export class GameMirror {
     return getFirestore() !== null;
   }
 
+  /**
+   * Pause/resume mirroring. While paused, this server stops overwriting
+   * gameState/live so the no-server BACKUP operator can take over as the
+   * authority (failover). Driven by the control/mode.backupMode flag.
+   */
+  setPaused(paused: boolean): void {
+    if (this.paused === paused) return;
+    this.paused = paused;
+    if (paused) {
+      this.pending = null;
+      if (this.timer) {
+        clearTimeout(this.timer);
+        this.timer = null;
+      }
+    }
+    logger.info({ paused }, paused ? 'Game mirror paused (backup mode)' : 'Game mirror resumed (server in control)');
+  }
+
   /** Queue a mirror write; bursts coalesce to one write per throttle window. */
   write(state: GameState): void {
-    if (!this.enabled) return;
+    if (!this.enabled || this.paused) return;
     this.pending = state;
     this.schedule();
   }
@@ -46,7 +65,7 @@ export class GameMirror {
   /** Write the latest pending state now (also used on graceful shutdown). */
   async flush(): Promise<void> {
     const fs = getFirestore();
-    if (!fs || this.writing || !this.pending) return;
+    if (!fs || this.writing || !this.pending || this.paused) return;
     const state = this.pending;
     this.pending = null;
     this.writing = true;

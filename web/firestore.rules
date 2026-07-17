@@ -13,6 +13,13 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // Failover control flag (control/mode.backupMode). Kept OFF gameState/live so
+    // the server's mirror (a full overwrite) can't wipe it. Open like gameState so
+    // either operator can flip it and every audience phone can read it.
+    match /control/{document} {
+      allow read, write: if true;
+    }
+
     // Voter registrations: each signed-in user can read/write ONLY their own doc.
     // (Server writes via Admin SDK; backup audience writes its own doc directly.)
     // No public read/delete — keeps attendee name + phone private.
