@@ -239,6 +239,12 @@ export function setSeg3Statement(state: GameState, playerId: number, statement: 
   };
 }
 
+export function toggleSeg3Statement(state: GameState, playerId: number): Patch {
+  const shown = state.segment3.shownStatements ?? [];
+  const next = shown.includes(playerId) ? shown.filter((x) => x !== playerId) : [...shown, playerId];
+  return { segment3: { ...state.segment3, shownStatements: next } };
+}
+
 // ── Award points (seg1 / seg2) ───────────────────────────────────────────────
 
 export function awardSegment(state: GameState, segment: SegmentKey): Patch {

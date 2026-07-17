@@ -80,6 +80,7 @@ interface GameState {
     showResult: boolean;
     winnerId: number | null;
     playerStatements?: { [playerId: number]: string };
+    shownStatements?: number[];
   };
   audienceVotes: {
     [uid: string]: {
@@ -1609,20 +1610,35 @@ export default function OperatorPage() {
           <p className="font-mono text-sm uppercase tracking-widest" style={{ color: '#52525b' }}>
             Player Statements <span style={{ color: '#3f3f46' }}>— shown live on display</span>
           </p>
-          {players.map((player) => (
-            <div key={player.id} className="flex items-start gap-3">
-              {player.photo && <img src={player.photo} className="w-10 h-10 rounded-full object-cover shrink-0 mt-1" alt="" />}
-              <span className="font-mono text-sm font-semibold w-24 shrink-0 pt-2" style={{ color: '#e4e4e7' }}>{player.name}</span>
-              <textarea
-                defaultValue={gameState.segment3.playerStatements?.[player.id] ?? ''}
-                onBlur={(e) => send(OP.SET_SEG3_STATEMENT, { playerId: player.id, statement: e.target.value.trim() })}
-                rows={2}
-                placeholder="Write this player's claim…"
-                className="flex-1 px-3 py-2 rounded font-mono text-sm focus:outline-none resize-none"
-                style={{ backgroundColor: '#09090b', border: '1px solid #3f3f46', color: '#fafafa' }}
-              />
-            </div>
-          ))}
+          {players.map((player) => {
+            const shown = (gameState.segment3.shownStatements ?? []).includes(player.id);
+            return (
+              <div key={player.id} className="flex items-start gap-3">
+                {player.photo && <img src={player.photo} className="w-10 h-10 rounded-full object-cover shrink-0 mt-1" alt="" />}
+                <div className="w-24 shrink-0 pt-1 space-y-1">
+                  <span className="font-mono text-sm font-semibold block truncate" style={{ color: '#e4e4e7' }}>{player.name}</span>
+                  <button
+                    onClick={() => send(OP.TOGGLE_SEG3_STATEMENT, { playerId: player.id })}
+                    className="w-full font-mono text-xs font-bold px-2 py-1 rounded transition-colors"
+                    style={{
+                      backgroundColor: shown ? '#052e16' : '#1a1a1a',
+                      color: shown ? '#4ade80' : '#71717a',
+                      border: `1px solid ${shown ? '#166534' : '#3f3f46'}`,
+                    }}>
+                    {shown ? 'SHOWN' : 'SHOW'}
+                  </button>
+                </div>
+                <textarea
+                  defaultValue={gameState.segment3.playerStatements?.[player.id] ?? ''}
+                  onBlur={(e) => send(OP.SET_SEG3_STATEMENT, { playerId: player.id, statement: e.target.value.trim() })}
+                  rows={2}
+                  placeholder="Write this player's claim…"
+                  className="flex-1 px-3 py-2 rounded font-mono text-sm focus:outline-none resize-none"
+                  style={{ backgroundColor: '#09090b', border: '1px solid #3f3f46', color: '#fafafa' }}
+                />
+              </div>
+            );
+          })}
           <p className="font-mono text-xs" style={{ color: '#3f3f46' }}>Saves when you click out of a box.</p>
         </div>
 

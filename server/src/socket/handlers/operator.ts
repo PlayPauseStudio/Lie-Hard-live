@@ -93,6 +93,10 @@ export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): vo
     apply(R.setSeg3Statement(store.getState(), d.playerId, d.statement)),
   );
 
+  on(OP.TOGGLE_SEG3_STATEMENT, S.toggleSeg3StatementSchema, (d) =>
+    apply(R.toggleSeg3Statement(store.getState(), d.playerId)),
+  );
+
   on(OP.AWARD_SEGMENT, S.awardSegmentSchema, (d) => apply(R.awardSegment(store.getState(), d.segment)));
 
   on(OP.AWARD_SEGMENT3, S.awardSegment3Schema, (d) =>

@@ -78,6 +78,7 @@ interface GameState {
     showResult: boolean;
     winnerId: number | null;
     playerStatements?: { [playerId: number]: string };
+    shownStatements?: number[];
   };
   audienceVotes: {
     [deviceId: string]: {
@@ -1758,6 +1759,9 @@ function Segment3Screen({ gameState }: { gameState: GameState }) {
             const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
             const statement = segment3.playerStatements?.[player.id] ?? "";
             const showVotes = gameState.showVoteBars ?? true;
+            const shown = (segment3.shownStatements ?? []).includes(player.id);
+            // Match Round 1's statement size; scale down as the player count grows.
+            const stmtFont = players.length <= 3 ? "clamp(18px, 2.71vw, 52px)" : players.length === 4 ? "clamp(16px, 2.2vw, 44px)" : "clamp(14px, 1.9vw, 38px)";
             return (
               <div key={player.id} className="flex items-start" style={{ gap: "1.04vw" }}>
                 <img
@@ -1777,17 +1781,25 @@ function Segment3Screen({ gameState }: { gameState: GameState }) {
                       </span>
                     )}
                   </div>
-                  <p
-                    className="font-display leading-snug"
-                    style={{
-                      color: statement ? "#e4e4e7" : "#3f3f46",
-                      fontStyle: statement ? "normal" : "italic",
-                      fontSize: "clamp(15px, 1.6vw, 32px)",
-                      marginTop: "0.3vw",
-                    }}
+                  {/* Statement box — same look as Round 1 (gold border, white text), gold border in both states */}
+                  <div
+                    className="rounded-3xl w-full overflow-hidden"
+                    style={{ border: "2px solid #f59e0b", backgroundColor: "rgba(13,13,15,0.97)", marginTop: "0.5vw" }}
                   >
-                    {statement || "—"}
-                  </p>
+                    {shown ? (
+                      <div style={{ padding: "clamp(10px, 1.5vw, 30px) clamp(14px, 2vw, 40px)" }}>
+                        <p className="font-display leading-tight" style={{ fontSize: stmtFont, color: "#ffffff" }}>
+                          {statement || "—"}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center" style={{ padding: "clamp(14px, 2vw, 40px)" }}>
+                        <p className="font-display uppercase tracking-widest" style={{ fontSize: "clamp(13px, 1.5vw, 30px)", color: "#3f3f46" }}>
+                          Hidden
+                        </p>
+                      </div>
+                    )}
+                  </div>
                   {showVotes && (
                     <div
                       className="w-full rounded-full overflow-hidden"
