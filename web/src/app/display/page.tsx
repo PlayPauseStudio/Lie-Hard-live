@@ -330,6 +330,9 @@ function Scoreboard({
     <div
       className="flex items-stretch"
       style={{
+        // ~15% smaller than full size; top-center origin keeps it anchored + centered.
+        transform: "scale(0.85)",
+        transformOrigin: "top center",
         backgroundColor: "#08080a",
         border: "1px solid rgba(245,158,11,0.35)",
         borderRadius: "1.2vw",
