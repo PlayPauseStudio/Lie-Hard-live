@@ -56,6 +56,11 @@ const STAGGER = argNum('--stagger', 0); // ms between connects
 const PACE = argNum('--pace', 0); // ms between vote rounds (--game)
 const ROUNDS = argNum('--rounds', 1); // vote in this many open rounds (--join)
 const WAIT = argNum('--wait', 120_000); // ms to wait for the next round to open (--join)
+const CONTIMEOUT = argNum('--contimeout', 45_000); // per-attempt connect timeout (ms)
+const CONNECT_DEADLINE = 150_000; // hard cap: give up on a socket after this (ms)
+// Shift the synthetic uid range so multiple processes/machines don't collide:
+// run one with --offset 0 and another with --offset 500 for 1000 distinct voters.
+const OFFSET = argNum('--offset', 0);
 
 const nowMs = () => Number(process.hrtime.bigint() / 1000n) / 1000; // ms, sub-ms precision
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -152,8 +157,15 @@ async function connectAudience(store: { state: AudState | null }) {
       const t0 = nowMs();
       const s = io(URL, {
         transports: ['websocket'],
-        reconnection: false,
-        auth: { role: 'audience', token: audToken(i) },
+        // High N from one machine: a single laptop can't complete 1000 TLS
+        // handshakes at once, so let slow/crowded-out attempts retry instead of
+        // dropping permanently, with a generous per-attempt timeout.
+        reconnection: true,
+        reconnectionAttempts: 12,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 8000,
+        timeout: CONTIMEOUT,
+        auth: { role: 'audience', token: audToken(OFFSET + i) },
       });
       sockets[i] = s;
       s.on('state:full', (msg: { state: AudState }) => {
@@ -167,14 +179,25 @@ async function connectAudience(store: { state: AudState | null }) {
         }
       };
       s.on('connect', () => {
-        connectMs.push(nowMs() - t0);
-        connected++;
+        if (!done) {
+          connectMs.push(nowMs() - t0);
+          connected++;
+        }
+        fin(); // count once; reconnects after this don't double-count
+      });
+      // Give up only after every reconnection attempt is exhausted…
+      s.io.on('reconnect_failed', () => {
+        bump(connectErrors, 'connect:failed');
         fin();
       });
-      s.on('connect_error', (e) => {
-        bump(connectErrors, `connect:${e.message}`);
-        fin();
-      });
+      // …or a hard deadline, so one wedged socket can't hang the whole run.
+      setTimeout(() => {
+        if (!done) {
+          bump(connectErrors, 'connect:deadline');
+          s.close();
+          fin();
+        }
+      }, CONNECT_DEADLINE);
     });
 
   const start = nowMs();
