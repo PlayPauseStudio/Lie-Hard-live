@@ -2525,10 +2525,14 @@ export default function OperatorPage() {
       0,
     );
 
-    // Bug fix: manual winner only applies when there IS an active tie
-    const effectiveWinnerId = seg3Result?.isTie
-      ? seg3ManualWinnerId
-      : (seg3Result?.winners[0]?.id ?? null);
+    // A manual pick always wins; otherwise fall back to the clear vote leader
+    // (a non-tie with at least one vote). Null means the operator hasn't chosen
+    // and there's no unambiguous leader yet.
+    const voteLeaderId =
+      seg3Result && !seg3Result.isTie && totalVotes > 0
+        ? (seg3Result.winners[0]?.id ?? null)
+        : null;
+    const effectiveWinnerId = seg3ManualWinnerId ?? voteLeaderId;
 
     return (
       <div className="space-y-4">
@@ -2785,72 +2789,68 @@ export default function OperatorPage() {
           </p>
         </div>
 
-        {seg3Result && totalVotes > 0 && (
+        {!segment3.showResult ? (
           <div
             className="rounded-xl p-5 space-y-4"
             style={{ backgroundColor: "#0d0d0f", border: "1px solid #27272a" }}
           >
-            {!seg3Result.isTie ? (
-              <p className="font-mono text-lg" style={{ color: "#fafafa" }}>
-                WINNER:{" "}
-                <span style={{ color: "#f59e0b", fontWeight: 700 }}>
-                  {seg3Result.winners[0]?.name}
-                </span>{" "}
-                <span style={{ color: "#52525b" }}>
-                  ({seg3Result.maxCount} votes)
-                </span>
+            {/* Winner picker is always available — pick the owner and award any
+                time, no need to wait for audience votes. When votes exist the
+                current leader is pre-selected as a suggestion. */}
+            <div>
+              <p
+                className="font-mono text-sm font-bold uppercase tracking-widest mb-4"
+                style={{ color: "#fbbf24" }}
+              >
+                Select winner:
               </p>
-            ) : (
-              <div>
-                <p
-                  className="font-mono text-sm font-bold uppercase tracking-widest mb-4"
-                  style={{ color: "#fbbf24" }}
-                >
-                  TIE DETECTED — Select winner manually:
-                </p>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: `repeat(${Math.min(players.length, 5)}, minmax(0, 1fr))`,
-                    gap: "12px",
-                  }}
-                >
-                  {players.map((p) => (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: `repeat(${Math.min(players.length, 5)}, minmax(0, 1fr))`,
+                  gap: "12px",
+                }}
+              >
+                {players.map((p) => {
+                  const selected = effectiveWinnerId === p.id;
+                  return (
                     <button
                       key={p.id}
                       onClick={() => setSeg3ManualWinnerId(p.id)}
                       className="p-4 rounded-xl font-mono text-base font-bold transition-all"
                       style={{
-                        border:
-                          seg3ManualWinnerId === p.id
-                            ? "2px solid #f59e0b"
-                            : "1px solid #3f3f46",
-                        backgroundColor:
-                          seg3ManualWinnerId === p.id ? "#130f00" : "#18181b",
-                        color:
-                          seg3ManualWinnerId === p.id ? "#f59e0b" : "#a1a1aa",
+                        border: selected
+                          ? "2px solid #f59e0b"
+                          : "1px solid #3f3f46",
+                        backgroundColor: selected ? "#130f00" : "#18181b",
+                        color: selected ? "#f59e0b" : "#a1a1aa",
                       }}
                     >
                       {p.name}
+                      <span
+                        className="block text-xs mt-1"
+                        style={{ color: "#52525b" }}
+                      >
+                        {playerVoteCounts[p.id]} vote
+                        {playerVoteCounts[p.id] === 1 ? "" : "s"}
+                      </span>
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
-            )}
+            </div>
 
-            {!segment3.showResult && (
-              <SegmentPointsInput
-                points={segment3.points ?? 50}
-                onSet={(p) =>
-                  send(OP.SET_SEGMENT_POINTS, {
-                    segment: "segment3",
-                    points: p,
-                  })
-                }
-              />
-            )}
+            <SegmentPointsInput
+              points={segment3.points ?? 50}
+              onSet={(p) =>
+                send(OP.SET_SEGMENT_POINTS, {
+                  segment: "segment3",
+                  points: p,
+                })
+              }
+            />
 
-            {effectiveWinnerId && !segment3.showResult && (
+            {effectiveWinnerId ? (
               <button
                 onClick={() => awardSeg3Points(effectiveWinnerId)}
                 className="w-full py-4 rounded-xl font-mono text-base font-bold uppercase tracking-widest transition-colors"
@@ -2861,7 +2861,27 @@ export default function OperatorPage() {
                   .find((p) => p.id === effectiveWinnerId)
                   ?.name?.toUpperCase()}
               </button>
+            ) : (
+              <p
+                className="font-mono text-sm text-center"
+                style={{ color: "#52525b" }}
+              >
+                Select a winner above to award {segment3.points ?? 50} pts
+              </p>
             )}
+          </div>
+        ) : (
+          <div
+            className="rounded-xl p-5"
+            style={{ backgroundColor: "#0d0d0f", border: "1px solid #27272a" }}
+          >
+            <p className="font-mono text-lg" style={{ color: "#fafafa" }}>
+              AWARDED:{" "}
+              <span style={{ color: "#f59e0b", fontWeight: 700 }}>
+                {players.find((p) => p.id === segment3.winnerId)?.name}
+              </span>{" "}
+              <span style={{ color: "#52525b" }}>+{segment3.points ?? 50}</span>
+            </p>
           </div>
         )}
 
