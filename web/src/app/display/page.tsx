@@ -2138,10 +2138,11 @@ export default function DisplayPage() {
         overflow: "hidden",
       }}
     >
-      {/* Top section: round + scoreboard + voting status */}
+      {/* Round label bar — kept short. The voting pill is pulled out (below) so
+          it no longer sets this bar's height, freeing vertical room for content. */}
       {!hideTopBar && (
         <div
-          className="z-30 flex items-center justify-between"
+          className="z-30 flex items-center"
           style={{
             padding: "0.83vw 1.25vw 0.73vw",
             borderBottom: "1px solid rgba(245,158,11,0.12)",
@@ -2166,10 +2167,16 @@ export default function DisplayPage() {
               {roundLabel}
             </p>
           </div>
+        </div>
+      )}
 
-          {/* scoreboard floats separately (below) so it doesn't take layout space */}
-          <div />
-
+      {/* Voting status — floats independently (like the scoreboard) in its exact
+          former top-right spot, without dictating the header height. */}
+      {!hideTopBar && (
+        <div
+          className="absolute z-30"
+          style={{ top: "0.83vw", right: "1.25vw" }}
+        >
           <div className="relative">
             <div
               className="flex items-center"
