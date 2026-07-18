@@ -22,6 +22,7 @@ export const OP = {
   TOGGLE_SEG3_STATEMENT: 'op:toggleSeg3Statement',
   AWARD_SEGMENT: 'op:awardSegment',
   AWARD_SEGMENT3: 'op:awardSegment3',
+  SET_SEGMENT_POINTS: 'op:setSegmentPoints',
   ADJUST_SCORE: 'op:adjustScore',
   TOGGLE_DISPLAY: 'op:toggleDisplay',
   TIMER_START: 'op:timerStart',

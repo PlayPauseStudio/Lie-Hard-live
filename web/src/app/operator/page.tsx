@@ -65,6 +65,7 @@ interface GameState {
     showResult: boolean;
     completedStorytellers: number[];
     statementShown?: boolean;
+    points?: number;
   };
   segment2: {
     statements: Segment2Statement[];
@@ -74,6 +75,7 @@ interface GameState {
     showResult: boolean;
     completedStorytellers: number[];
     revealedStatements: number[];
+    points?: number;
   };
   segment3: {
     photoUrl: string | null;
@@ -83,6 +85,7 @@ interface GameState {
     winnerId: number | null;
     playerStatements?: { [playerId: number]: string };
     shownStatements?: number[];
+    points?: number;
   };
   audienceVotes: {
     [uid: string]: {
@@ -118,6 +121,48 @@ const PHASE_LABELS: Record<GameState["phase"], string> = {
 };
 
 // ── Module-level components (fixes remount bug from inner definitions) ─────
+
+/**
+ * Operator control to set the points this round is played for. Local input state
+ * stays authoritative while focused (so server echoes never fight the caret);
+ * on blur it re-syncs to the authoritative value.
+ */
+function SegmentPointsInput({
+  points,
+  onSet,
+}: {
+  points: number;
+  onSet: (p: number) => void;
+}) {
+  const [val, setVal] = useState(String(points));
+  const focused = useRef(false);
+  useEffect(() => {
+    if (!focused.current) setVal(String(points));
+  }, [points]);
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs uppercase tracking-wide text-zinc-400">
+        Points this round
+      </span>
+      <input
+        type="number"
+        min={0}
+        value={val}
+        onFocus={() => (focused.current = true)}
+        onBlur={() => {
+          focused.current = false;
+          setVal(String(points));
+        }}
+        onChange={(e) => {
+          setVal(e.target.value);
+          const n = parseInt(e.target.value, 10);
+          if (!Number.isNaN(n) && n >= 0) onSet(n);
+        }}
+        className="w-20 rounded border border-amber-500/40 bg-zinc-800 px-2 py-1 text-center text-white tabular-nums focus:border-amber-500 focus:outline-none"
+      />
+    </div>
+  );
+}
 
 function VoteBars({ counts }: { counts: Record<string, number> }) {
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
@@ -344,7 +389,11 @@ export default function OperatorPage() {
     return () => unsub();
   }, []);
   const setAudienceBackupMode = (backup: boolean) => {
-    void setDoc(doc(db, "control", "mode"), { backupMode: backup }, { merge: true });
+    void setDoc(
+      doc(db, "control", "mode"),
+      { backupMode: backup },
+      { merge: true },
+    );
   };
 
   // Resize player name/photo arrays when count changes
@@ -383,7 +432,7 @@ export default function OperatorPage() {
       calcSeg1Points();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState?.segment1?.statements]);
+  }, [gameState?.segment1?.statements, gameState?.segment1?.points]);
 
   useEffect(() => {
     if (
@@ -395,7 +444,7 @@ export default function OperatorPage() {
       calcSeg2Points();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState?.segment2?.statements]);
+  }, [gameState?.segment2?.statements, gameState?.segment2?.points]);
 
   // Compute local display seconds from Firestore timer state
   useEffect(() => {
@@ -661,6 +710,7 @@ export default function OperatorPage() {
     );
     if (!stmtObj) return;
     const storytellerId = segment1.currentStorytellerId!;
+    const pts = segment1.points ?? 10;
     const correctAnswer = stmtObj.isLie ? "LIE" : "TRUTH";
     const nonStorytellers = players.filter((p) => p.id !== storytellerId);
     const totals: Record<number, number> = Object.fromEntries(
@@ -672,14 +722,14 @@ export default function OperatorPage() {
     nonStorytellers.forEach((player) => {
       const vote = segment1.playerVotes[player.id];
       if (vote === correctAnswer) {
-        totals[player.id] += 10;
+        totals[player.id] += pts;
         lines.push(
-          `${player.name} voted ${vote} → CORRECT → ${player.name} +10 pts`,
+          `${player.name} voted ${vote} → CORRECT → ${player.name} +${pts} pts`,
         );
       } else if (vote) {
-        totals[storytellerId] += 10;
+        totals[storytellerId] += pts;
         lines.push(
-          `${player.name} voted ${vote} → WRONG → ${storytellerName} +10 pts`,
+          `${player.name} voted ${vote} → WRONG → ${storytellerName} +${pts} pts`,
         );
       } else {
         lines.push(`${player.name} did not vote`);
@@ -705,6 +755,7 @@ export default function OperatorPage() {
     );
     if (!stmtObj) return;
     const storytellerId = segment2.currentStorytellerId!;
+    const pts = segment2.points ?? 20;
     const correctAnswer = "STATEMENT_" + stmtObj.lieIndex;
     const nonStorytellers = players.filter((p) => p.id !== storytellerId);
     const totals: Record<number, number> = Object.fromEntries(
@@ -716,14 +767,14 @@ export default function OperatorPage() {
     nonStorytellers.forEach((player) => {
       const vote = segment2.playerVotes[player.id];
       if (vote === correctAnswer) {
-        totals[player.id] += 20;
+        totals[player.id] += pts;
         lines.push(
-          `${player.name} voted ${vote} → CORRECT → ${player.name} +20 pts`,
+          `${player.name} voted ${vote} → CORRECT → ${player.name} +${pts} pts`,
         );
       } else if (vote) {
-        totals[storytellerId] += 20;
+        totals[storytellerId] += pts;
         lines.push(
-          `${player.name} voted ${vote} → WRONG → ${storytellerName} +20 pts`,
+          `${player.name} voted ${vote} → WRONG → ${storytellerName} +${pts} pts`,
         );
       } else {
         lines.push(`${player.name} did not vote`);
@@ -1966,6 +2017,18 @@ export default function OperatorPage() {
               {renderBanterTimer()}
               <VoteBars counts={counts} />
 
+              {segment1.currentStorytellerId != null && (
+                <SegmentPointsInput
+                  points={segment1.points ?? 10}
+                  onSet={(p) =>
+                    send(OP.SET_SEGMENT_POINTS, {
+                      segment: "segment1",
+                      points: p,
+                    })
+                  }
+                />
+              )}
+
               {!segment1.showResult && (
                 <button
                   onClick={() => {
@@ -2319,6 +2382,18 @@ export default function OperatorPage() {
             <div className="space-y-5">
               {renderBanterTimer()}
               <VoteBars counts={counts} />
+
+              {segment2.currentStorytellerId != null && (
+                <SegmentPointsInput
+                  points={segment2.points ?? 20}
+                  onSet={(p) =>
+                    send(OP.SET_SEGMENT_POINTS, {
+                      segment: "segment2",
+                      points: p,
+                    })
+                  }
+                />
+              )}
 
               {/* Statement reveal progress + reveal truth/lie */}
               {!segment2.showResult &&
@@ -2763,13 +2838,25 @@ export default function OperatorPage() {
               </div>
             )}
 
+            {!segment3.showResult && (
+              <SegmentPointsInput
+                points={segment3.points ?? 50}
+                onSet={(p) =>
+                  send(OP.SET_SEGMENT_POINTS, {
+                    segment: "segment3",
+                    points: p,
+                  })
+                }
+              />
+            )}
+
             {effectiveWinnerId && !segment3.showResult && (
               <button
                 onClick={() => awardSeg3Points(effectiveWinnerId)}
                 className="w-full py-4 rounded-xl font-mono text-base font-bold uppercase tracking-widest transition-colors"
                 style={{ backgroundColor: "#f59e0b", color: "#09090b" }}
               >
-                AWARD 300 PTS TO{" "}
+                AWARD {segment3.points ?? 50} PTS TO{" "}
                 {players
                   .find((p) => p.id === effectiveWinnerId)
                   ?.name?.toUpperCase()}
@@ -3000,7 +3087,10 @@ export default function OperatorPage() {
       {backupMode && (
         <div
           className="w-full flex items-center justify-center gap-4 px-4 py-2 text-center flex-wrap"
-          style={{ backgroundColor: "#450a0a", borderBottom: "1px solid #7f1d1d" }}
+          style={{
+            backgroundColor: "#450a0a",
+            borderBottom: "1px solid #7f1d1d",
+          }}
         >
           <span
             className="font-mono text-sm font-bold"

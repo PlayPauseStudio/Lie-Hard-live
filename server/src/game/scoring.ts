@@ -45,7 +45,8 @@ export function computeSegmentAward(gs: GameState, segNum: 1 | 2): SegmentAward 
   const storytellerId = seg.currentStorytellerId;
   if (storytellerId == null) return { totals, deltas: [] };
 
-  const points = segNum === 1 ? SEG1_POINTS : SEG2_POINTS;
+  // Operator-adjustable per-round value; falls back to the segment default.
+  const points = seg.points ?? (segNum === 1 ? SEG1_POINTS : SEG2_POINTS);
 
   let correctAnswer: string;
   if (segNum === 1) {

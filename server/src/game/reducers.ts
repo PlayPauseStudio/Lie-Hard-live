@@ -126,6 +126,8 @@ export function selectStoryteller(state: GameState, segment: SegmentKey, playerI
         audienceVotingOpen: false,
         showResult: false,
         statementShown: false,
+        // Each storyteller's round starts at the default value; the operator can bump it.
+        points: SEG1_POINTS,
       },
     };
   }
@@ -137,8 +139,19 @@ export function selectStoryteller(state: GameState, segment: SegmentKey, playerI
       audienceVotingOpen: false,
       showResult: false,
       revealedStatements: [],
+      points: SEG2_POINTS,
     },
   };
+}
+
+// ── Per-round points (operator-adjustable award value) ────────────────────────
+
+export function setSegmentPoints(
+  state: GameState,
+  segment: 'segment1' | 'segment2' | 'segment3',
+  points: number,
+): Patch {
+  return { [segment]: { ...state[segment], points } } as Patch;
 }
 
 // ── Operator-logged player votes (seg1 / seg2) ───────────────────────────────
@@ -184,7 +197,7 @@ export function editSeg1Statement(
       patch.voterScores = voterScoreSwap(state, `seg1-${playerId}`, oldChoice, newChoice);
     }
     if (s.completedStorytellers.includes(playerId)) {
-      const delta = answerSwapDelta(state.players, playerId, s.playerVotes, oldChoice, newChoice, SEG1_POINTS);
+      const delta = answerSwapDelta(state.players, playerId, s.playerVotes, oldChoice, newChoice, s.points ?? SEG1_POINTS);
       patch.players = state.players.map((p) => ({ ...p, score: p.score + (delta[p.id] ?? 0) }));
     }
   }
@@ -215,7 +228,7 @@ export function editSeg2Statement(
       patch.voterScores = voterScoreSwap(state, `seg2-${playerId}`, oldChoice, newChoice);
     }
     if (s.completedStorytellers.includes(playerId)) {
-      const delta = answerSwapDelta(state.players, playerId, s.playerVotes, oldChoice, newChoice, SEG2_POINTS);
+      const delta = answerSwapDelta(state.players, playerId, s.playerVotes, oldChoice, newChoice, s.points ?? SEG2_POINTS);
       patch.players = state.players.map((p) => ({ ...p, score: p.score + (delta[p.id] ?? 0) }));
     }
   }
@@ -271,13 +284,14 @@ export function awardSegment(state: GameState, segment: SegmentKey): Patch {
 
 export function awardSegment3(state: GameState, winnerId: number): Patch {
   const winner = state.players.find((p) => p.id === winnerId);
+  const pts = state.segment3.points ?? SEG3_POINTS;
   const updatedPlayers = state.players.map((p) =>
-    p.id === winnerId ? { ...p, score: p.score + SEG3_POINTS } : p,
+    p.id === winnerId ? { ...p, score: p.score + pts } : p,
   );
   return {
     players: updatedPlayers,
     segment3: { ...state.segment3, winnerId, showResult: true },
-    scorePopupDeltas: winner ? [{ name: winner.name, delta: SEG3_POINTS }] : [],
+    scorePopupDeltas: winner ? [{ name: winner.name, delta: pts }] : [],
     showScorePopup: false,
     voterScores: awardVoterScores(state, 'seg3', String(winnerId)),
   };

@@ -103,6 +103,10 @@ export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): vo
     apply(R.awardSegment3(store.getState(), d.winnerId)),
   );
 
+  on(OP.SET_SEGMENT_POINTS, S.setSegmentPointsSchema, (d) =>
+    apply(R.setSegmentPoints(store.getState(), d.segment, d.points)),
+  );
+
   on(OP.ADJUST_SCORE, S.adjustScoreSchema, (d) =>
     apply(R.adjustScore(store.getState(), d.playerId, d.delta)),
   );

@@ -96,6 +96,10 @@ export const setSeg3StatementSchema = z.object({
 export const toggleSeg3StatementSchema = z.object({ playerId: z.number().int() });
 export const awardSegmentSchema = z.object({ segment: segmentKey });
 export const awardSegment3Schema = z.object({ winnerId: z.number().int() });
+export const setSegmentPointsSchema = z.object({
+  segment: z.enum(['segment1', 'segment2', 'segment3']),
+  points: z.number().int().min(0).max(100_000),
+});
 export const adjustScoreSchema = z.object({
   playerId: z.number().int(),
   delta: z.number().int().min(-100_000).max(100_000),

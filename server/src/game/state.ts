@@ -76,6 +76,8 @@ export interface GameState {
     completedStorytellers: number[];
     // Operator toggles whether the statement text is on the display during voting.
     statementShown: boolean;
+    // Points this round is played for (operator-adjustable; resets to default per storyteller).
+    points: number;
   };
   segment2: {
     statements: Segment2Statement[];
@@ -85,6 +87,8 @@ export interface GameState {
     showResult: boolean;
     completedStorytellers: number[];
     revealedStatements: number[];
+    // Points this round is played for (operator-adjustable; resets to default per storyteller).
+    points: number;
   };
   segment3: {
     photoUrl: string | null;
@@ -96,6 +100,8 @@ export interface GameState {
     playerStatements: { [playerId: number]: string };
     // Player ids whose statement the operator has revealed on the display.
     shownStatements: number[];
+    // Points the winner is awarded (operator-adjustable).
+    points: number;
   };
   audienceVotes: { [uid: string]: AudienceVote };
   voterScores: { [uid: string]: VoterScore };
@@ -132,6 +138,7 @@ export function initialGameState(): GameState {
       showResult: false,
       completedStorytellers: [],
       statementShown: false,
+      points: SEG1_POINTS,
     },
     segment2: {
       statements: [],
@@ -141,8 +148,9 @@ export function initialGameState(): GameState {
       showResult: false,
       completedStorytellers: [],
       revealedStatements: [],
+      points: SEG2_POINTS,
     },
-    segment3: { photoUrl: null, photoTitle: null, audienceVotingOpen: false, showResult: false, winnerId: null, playerStatements: {}, shownStatements: [] },
+    segment3: { photoUrl: null, photoTitle: null, audienceVotingOpen: false, showResult: false, winnerId: null, playerStatements: {}, shownStatements: [], points: SEG3_POINTS },
     audienceVotes: {},
     voterScores: {},
   };

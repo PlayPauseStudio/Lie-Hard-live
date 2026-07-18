@@ -79,6 +79,7 @@ interface GameState {
     winnerId: number | null;
     playerStatements?: { [playerId: number]: string };
     shownStatements?: number[];
+    points?: number;
   };
   audienceVotes: {
     [deviceId: string]: {
@@ -1687,6 +1688,7 @@ function Segment2Screen({ gameState }: { gameState: GameState }) {
 function Segment3Screen({ gameState }: { gameState: GameState }) {
   const { segment3, players } = gameState;
   const winner = players.find((p) => p.id === segment3.winnerId);
+  const seg3Points = segment3.points ?? 50;
 
   const [kpDisplay, setKpDisplay] = useState(0);
   useEffect(() => {
@@ -1694,16 +1696,18 @@ function Segment3Screen({ gameState }: { gameState: GameState }) {
       setKpDisplay(0);
       return;
     }
+    // Count up to the configured award over ~30 frames, whatever the value.
+    const step = Math.max(1, Math.ceil(seg3Points / 30));
     let current = 0;
     const interval = setInterval(() => {
-      current += 10;
-      if (current >= 300) {
-        setKpDisplay(300);
+      current += step;
+      if (current >= seg3Points) {
+        setKpDisplay(seg3Points);
         clearInterval(interval);
       } else setKpDisplay(current);
     }, 25);
     return () => clearInterval(interval);
-  }, [segment3.showResult, segment3.winnerId]);
+  }, [segment3.showResult, segment3.winnerId, seg3Points]);
 
   const playerCounts: Record<number, number> = Object.fromEntries(
     players.map((p) => [p.id, 0]),
