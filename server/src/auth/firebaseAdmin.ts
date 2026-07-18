@@ -54,6 +54,13 @@ export interface VerifiedUser {
  */
 export async function verifyIdToken(token: string): Promise<VerifiedUser> {
   if (!token) throw new Error('missing_token');
+  // Load-test bypass (env-gated; UNSET in normal prod). Accepts synthetic
+  // `lt:<secret>:<id>` tokens as uid `lt-<id>` without Firebase, so a load
+  // script can connect as many audience members against the real server.
+  if (env.LOADTEST_SECRET) {
+    const prefix = `lt:${env.LOADTEST_SECRET}:`;
+    if (token.startsWith(prefix)) return { uid: `lt-${token.slice(prefix.length)}` };
+  }
   if (!isFirebaseConfigured()) {
     if (isProd) throw new Error('auth_unavailable');
     return { uid: token }; // dev fallback

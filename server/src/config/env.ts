@@ -23,6 +23,11 @@ const schema = z.object({
   OPERATOR_PASSWORD: z.string().optional(),
   OPERATOR_JWT_TTL: z.string().default('12h'),
 
+  // Load-test bypass (leave UNSET in normal prod). When set, audience tokens
+  // shaped `lt:<LOADTEST_SECRET>:<id>` are accepted as uid `lt-<id>` without
+  // Firebase, so a load script can spin up synthetic audience members.
+  LOADTEST_SECRET: z.string().optional(),
+
   FIREBASE_SERVICE_ACCOUNT_B64: z.string().optional(),
 
   REDIS_URL: z.string().optional(),
