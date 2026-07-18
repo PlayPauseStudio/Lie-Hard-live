@@ -1,21 +1,31 @@
 /**
  * Socket load test for the live server.
  *
- *   npx tsx scripts/loadtest.ts [N] [--game] [--stagger <ms>] [--pace <ms>]
+ *   npx tsx scripts/loadtest.ts [N] [mode] [options]
  *
  * Modes:
- *   (default)  connect N audience, open the warmup vote, everyone votes once.
- *              Quick connectivity + single-wave smoke test.
- *   --game     play a full show round-by-round: warmup → segment1 (each player)
- *              → segment2 (each player, both statements revealed) → segment3.
- *              The N audience stay connected the whole show and vote every round,
- *              so this exercises sustained connections + repeated vote waves +
- *              the Firestore mirror — the realistic 20–30 min live-show pattern.
+ *   --join     AUDIENCE ONLY. Connect N fake audience, then vote in whatever
+ *              round YOU open from the real operator panel — the script never
+ *              touches the operator or advances the game, you control the flow.
+ *              By default it votes in one round and exits; `--rounds <n>` keeps
+ *              the N connected and votes once in each of the next <n> rounds you
+ *              open (great for driving a whole show by hand under load).
+ *              Needs LOADTEST_URL (+ LOADTEST_SECRET for Railway). No operator
+ *              password required.
+ *
+ *   --game     DRIVER. Logs in as operator, starts a show, and plays it start to
+ *              finish (warmup → seg1×players → seg2×players → seg3) with the N
+ *              audience voting each round. Fully automated; resets game state.
+ *
+ *   (default)  DRIVER. Operator starts a show, opens the warmup vote, everyone
+ *              votes once. Quick connectivity smoke test.
  *
  * Options:
  *   [N]            audience count (default 100)
+ *   --rounds <n>   (--join) vote in this many successive open rounds (default 1)
+ *   --wait <ms>    (--join) how long to wait for the next round to open (default 120000)
  *   --stagger <ms> delay between audience connects (spread the connect storm)
- *   --pace <ms>    delay between vote rounds in --game mode (simulate show pacing)
+ *   --pace <ms>    (--game) delay between vote rounds (simulate show pacing)
  *
  * Auth:
  *   Locally (server without a Firebase service account) the dev fallback treats
@@ -23,7 +33,7 @@
  *   set LOADTEST_SECRET to the value configured on the server and tokens become
  *   `lt:<secret>:<id>` (accepted as uid `lt-<id>` without Firebase).
  *
- * Env: LOADTEST_URL, OPERATOR_PASSWORD, LOADTEST_SECRET
+ * Env: LOADTEST_URL, OPERATOR_PASSWORD (driver modes only), LOADTEST_SECRET
  */
 import { io, type Socket } from 'socket.io-client';
 
@@ -36,6 +46,7 @@ const SECRET = process.env.LOADTEST_SECRET ?? '';
 const audToken = (i: number) => (SECRET ? `lt:${SECRET}:${i}` : `lt-${i}`);
 
 const N = Number(process.argv[2] ?? 100);
+const JOIN = process.argv.includes('--join');
 const GAME = process.argv.includes('--game');
 const argNum = (flag: string, dflt: number) => {
   const idx = process.argv.indexOf(flag);
@@ -43,17 +54,33 @@ const argNum = (flag: string, dflt: number) => {
 };
 const STAGGER = argNum('--stagger', 0); // ms between connects
 const PACE = argNum('--pace', 0); // ms between vote rounds (--game)
+const ROUNDS = argNum('--rounds', 1); // vote in this many open rounds (--join)
+const WAIT = argNum('--wait', 120_000); // ms to wait for the next round to open (--join)
 
 const nowMs = () => Number(process.hrtime.bigint() / 1000n) / 1000; // ms, sub-ms precision
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const pace = () => (PACE ? sleep(PACE) : Promise.resolve());
 
-// 3-player show used by --game mode.
+// 3-player show used by the driver (--game / default) modes.
 const PLAYERS = [
   { id: 1, name: 'P1', photo: '' },
   { id: 2, name: 'P2', photo: '' },
   { id: 3, name: 'P3', photo: '' },
 ];
+
+// Minimal shape of the redacted state the audience receives (game/redact.ts).
+interface AudState {
+  phase: string;
+  players: { id: number }[];
+  warmup: { currentIndex: number; audienceVotingOpen: boolean };
+  segment1: { currentStorytellerId: number | null; audienceVotingOpen: boolean };
+  segment2: {
+    currentStorytellerId: number | null;
+    audienceVotingOpen: boolean;
+    statements: { playerId: number; statements: string[] }[];
+  };
+  segment3: { audienceVotingOpen: boolean };
+}
 
 function pct(arr: number[], p: number): number {
   if (!arr.length) return 0;
@@ -76,10 +103,180 @@ function emitAck(s: Socket, ev: string, payload: unknown, timeout = 15000): Prom
   });
 }
 
-async function main() {
-  console.log(`\nLoad test → ${URL} | N=${N} | mode=${GAME ? 'game' : 'single'} | stagger=${STAGGER}ms | pace=${PACE}ms`);
+// The round key currently open, matching the server's getCurrentVotingRound.
+function openRoundKey(s: AudState | null): string | null {
+  if (!s) return null;
+  if (s.phase === 'WARMUP' && s.warmup?.audienceVotingOpen) return `warmup-${s.warmup.currentIndex}`;
+  if (s.phase === 'SEGMENT1' && s.segment1?.audienceVotingOpen && s.segment1.currentStorytellerId != null)
+    return `seg1-${s.segment1.currentStorytellerId}`;
+  if (s.phase === 'SEGMENT2' && s.segment2?.audienceVotingOpen && s.segment2.currentStorytellerId != null)
+    return `seg2-${s.segment2.currentStorytellerId}`;
+  if (s.phase === 'SEGMENT3' && s.segment3?.audienceVotingOpen) return 'seg3';
+  return null;
+}
 
-  // 1) Operator login → JWT
+// A valid choice for voter i in the open round (derived from live state).
+function choiceFor(key: string, s: AudState, i: number): string {
+  if (key.startsWith('warmup') || key.startsWith('seg1')) return i % 2 ? 'LIE' : 'TRUTH';
+  if (key.startsWith('seg2')) {
+    const st = s.segment2.statements.find((x) => x.playerId === s.segment2.currentStorytellerId);
+    const k = st?.statements?.length ?? 2;
+    return `STATEMENT_${i % k}`;
+  }
+  if (key === 'seg3') {
+    const ids = s.players.map((p) => p.id);
+    return ids.length ? String(ids[i % ids.length]) : '1';
+  }
+  return 'TRUTH';
+}
+
+interface Wave {
+  label: string;
+  ok: number;
+  ms: number[];
+  errs: Record<string, number>;
+}
+
+// Connect N audience sockets once; each keeps `store.state` fresh from state:full.
+async function connectAudience(store: { state: AudState | null }) {
+  const sockets: Socket[] = new Array(N);
+  const connectMs: number[] = [];
+  const connectErrors: Record<string, number> = {};
+  let connected = 0;
+
+  const connectOne = (i: number) =>
+    new Promise<void>((resolve) => {
+      const t0 = nowMs();
+      const s = io(URL, {
+        transports: ['websocket'],
+        reconnection: false,
+        auth: { role: 'audience', token: audToken(i) },
+      });
+      sockets[i] = s;
+      s.on('state:full', (msg: { state: AudState }) => {
+        if (msg?.state) store.state = msg.state;
+      });
+      let done = false;
+      const fin = () => {
+        if (!done) {
+          done = true;
+          resolve();
+        }
+      };
+      s.on('connect', () => {
+        connectMs.push(nowMs() - t0);
+        connected++;
+        fin();
+      });
+      s.on('connect_error', (e) => {
+        bump(connectErrors, `connect:${e.message}`);
+        fin();
+      });
+    });
+
+  const start = nowMs();
+  const jobs: Promise<void>[] = [];
+  for (let i = 0; i < N; i++) {
+    jobs.push(connectOne(i));
+    if (STAGGER) await sleep(STAGGER);
+  }
+  await Promise.all(jobs);
+  const wall = nowMs() - start;
+  console.log(`\nconnected: ${connected}/${N}  wall: ${wall.toFixed(0)}ms`);
+  stat('connect', connectMs);
+  if (Object.keys(connectErrors).length) console.log('  connect errors:', connectErrors);
+  return { sockets, connectMs, connected };
+}
+
+// One vote wave: every connected socket votes once with `choiceFn(i)`.
+async function voteWave(sockets: Socket[], label: string, choiceFn: (i: number) => string): Promise<Wave> {
+  const ms: number[] = [];
+  const errs: Record<string, number> = {};
+  let ok = 0;
+  await Promise.all(
+    sockets.map(
+      (s, i) =>
+        new Promise<void>((resolve) => {
+          if (!s || !s.connected) {
+            bump(errs, 'not_connected');
+            return resolve();
+          }
+          const v0 = nowMs();
+          s.timeout(15000).emit(
+            'aud:vote',
+            { choice: choiceFn(i) },
+            (err: unknown, ack: { ok?: boolean; error?: string }) => {
+              if (err) bump(errs, 'timeout');
+              else if (ack?.ok) {
+                ms.push(nowMs() - v0);
+                ok++;
+              } else bump(errs, `err:${ack?.error ?? 'unknown'}`);
+              resolve();
+            },
+          );
+        }),
+    ),
+  );
+  const errStr = Object.keys(errs).length ? `  errors=${JSON.stringify(errs)}` : '';
+  console.log(`  round ${label.padEnd(12)} voted ${ok}/${sockets.length}  p95=${pct(ms, 95).toFixed(0)}ms${errStr}`);
+  return { label, ok, ms, errs };
+}
+
+function report(connectMs: number[], connected: number, waves: Wave[], wallMs: number) {
+  const allVoteMs = waves.flatMap((w) => w.ms);
+  const totalVotes = waves.reduce((a, w) => a + w.ok, 0);
+  const totalErrs = waves.reduce<Record<string, number>>((acc, w) => {
+    for (const [k, v] of Object.entries(w.errs)) acc[k] = (acc[k] ?? 0) + v;
+    return acc;
+  }, {});
+  console.log(`\n── Results: N=${N} | ${waves.length} vote round(s) | wall: ${wallMs.toFixed(0)}ms ──`);
+  console.log(`connected: ${connected}/${N}   votes accepted: ${totalVotes}/${N * Math.max(1, waves.length)}`);
+  stat('connect', connectMs);
+  stat('vote-ack', allVoteMs);
+  if (Object.keys(totalErrs).length) console.log('vote errors:', totalErrs);
+  else console.log('vote errors: none');
+}
+
+// ── --join: audience-only, you drive the game from the operator panel ─────────
+async function runJoin() {
+  console.log(`\nJOIN mode → ${URL} | N=${N} | rounds=${ROUNDS} | stagger=${STAGGER}ms`);
+  console.log('Connecting audience… then waiting for YOU to open a vote in the operator panel.');
+  const store: { state: AudState | null } = { state: null };
+  const { sockets, connectMs, connected } = await connectAudience(store);
+
+  const waves: Wave[] = [];
+  const runStart = nowMs();
+  let lastKey: string | null = null;
+
+  for (let r = 0; r < ROUNDS; r++) {
+    // Wait for a NEW open round (different from the one we just voted in).
+    const deadline = nowMs() + WAIT;
+    let key = openRoundKey(store.state);
+    while ((key === null || key === lastKey) && nowMs() < deadline) {
+      await sleep(200);
+      key = openRoundKey(store.state);
+    }
+    if (key === null || key === lastKey) {
+      console.log(`\nNo new round opened within ${(WAIT / 1000).toFixed(0)}s — stopping.`);
+      break;
+    }
+    console.log(`\n▶ round "${key}" is open — casting ${connected} votes`);
+    const snapshot = store.state as AudState;
+    waves.push(await voteWave(sockets, key, (i) => choiceFor(key as string, snapshot, i)));
+    lastKey = key;
+    if (r < ROUNDS - 1) console.log('  (lock/reveal this round and open the next when ready…)');
+  }
+
+  report(connectMs, connected, waves, nowMs() - runStart);
+  sockets.forEach((s) => s?.close());
+  await sleep(200);
+  process.exit(0);
+}
+
+// ── driver modes (--game / default): script acts as operator too ──────────────
+async function runDriver() {
+  console.log(`\nDRIVER mode → ${URL} | N=${N} | ${GAME ? 'full game' : 'warmup smoke'} | stagger=${STAGGER}ms | pace=${PACE}ms`);
+
   const res = await fetch(`${URL}/auth/operator/login`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -88,13 +285,11 @@ async function main() {
   if (!res.ok) throw new Error(`operator login failed: HTTP ${res.status}`);
   const { token } = (await res.json()) as { token: string };
 
-  // 2) Operator socket → start the show
   const op = io(URL, { transports: ['websocket'], auth: { role: 'operator', token } });
   await new Promise<void>((r, rej) => {
     op.once('connect', () => r());
     op.once('connect_error', (e) => rej(new Error(`operator connect_error: ${e.message}`)));
   });
-  // Operator helper: emit + warn if the server rejected the command.
   const opDo = async (ev: string, payload: unknown) => {
     const a = await emitAck(op, ev, payload);
     if (!a.ok) console.warn(`  ! operator ${ev} → ${a.error}`);
@@ -119,167 +314,71 @@ async function main() {
     segment3: { photoUrl: null, photoTitle: 'Mystery object' },
   });
 
-  // 3) Connect N audience sockets once; they stay connected for the whole run.
-  const sockets: Socket[] = new Array(N);
-  const connectMs: number[] = [];
-  const connectErrors: Record<string, number> = {};
-  let connected = 0;
+  const store: { state: AudState | null } = { state: null };
+  const { sockets, connectMs, connected } = await connectAudience(store);
 
-  const connectOne = (i: number) =>
-    new Promise<void>((resolve) => {
-      const t0 = nowMs();
-      const s = io(URL, {
-        transports: ['websocket'],
-        reconnection: false,
-        auth: { role: 'audience', token: audToken(i) },
-      });
-      sockets[i] = s;
-      let done = false;
-      const fin = () => {
-        if (!done) {
-          done = true;
-          resolve();
-        }
-      };
-      s.on('connect', () => {
-        connectMs.push(nowMs() - t0);
-        connected++;
-        fin();
-      });
-      s.on('connect_error', (e) => {
-        bump(connectErrors, `connect:${e.message}`);
-        fin();
-      });
-    });
-
-  const connectStart = nowMs();
-  const connJobs: Promise<void>[] = [];
-  for (let i = 0; i < N; i++) {
-    connJobs.push(connectOne(i));
-    if (STAGGER) await sleep(STAGGER);
-  }
-  await Promise.all(connJobs);
-  const connectWall = nowMs() - connectStart;
-  console.log(`\nconnected: ${connected}/${N}  wall: ${connectWall.toFixed(0)}ms`);
-  stat('connect', connectMs);
-  if (Object.keys(connectErrors).length) console.log('  connect errors:', connectErrors);
-
-  // One vote wave: every connected socket votes once with a round-appropriate
-  // choice. Records ack latency + errors, tagged with the round label.
-  const waves: { label: string; ok: number; ms: number[]; errs: Record<string, number> }[] = [];
-  const voteWave = async (label: string, choiceFn: (i: number) => string) => {
-    const ms: number[] = [];
-    const errs: Record<string, number> = {};
-    let ok = 0;
-    await Promise.all(
-      sockets.map(
-        (s, i) =>
-          new Promise<void>((resolve) => {
-            if (!s || !s.connected) {
-              bump(errs, 'not_connected');
-              return resolve();
-            }
-            const v0 = nowMs();
-            s.timeout(15000).emit(
-              'aud:vote',
-              { choice: choiceFn(i) },
-              (err: unknown, ack: { ok?: boolean; error?: string }) => {
-                if (err) bump(errs, 'timeout');
-                else if (ack?.ok) {
-                  ms.push(nowMs() - v0);
-                  ok++;
-                } else bump(errs, `err:${ack?.error ?? 'unknown'}`);
-                resolve();
-              },
-            );
-          }),
-      ),
-    );
-    waves.push({ label, ok, ms, errs });
-    const errStr = Object.keys(errs).length ? `  errors=${JSON.stringify(errs)}` : '';
-    console.log(`  round ${label.padEnd(12)} voted ${ok}/${sockets.length}  p95=${pct(ms, 95).toFixed(0)}ms${errStr}`);
-    return ms;
-  };
-
-  const TL = (i: number) => (i % 2 ? 'LIE' : 'TRUTH'); // truth/lie split
+  const waves: Wave[] = [];
+  const TL = (i: number) => (i % 2 ? 'LIE' : 'TRUTH');
   const runStart = nowMs();
 
   if (!GAME) {
-    // ── Single-wave smoke: warmup vote only ──
     console.log('\noperator: warmup vote OPEN');
     await opDo('op:openVote', { segment: 'warmup' });
-    await voteWave('warmup', TL);
+    waves.push(await voteWave(sockets, 'warmup', TL));
     await opDo('op:lockVote', { segment: 'warmup' });
   } else {
-    // ── Full round-wise gameplay ──
     console.log('\n── playing full show ──');
-
-    // Warmup
     await opDo('op:warmupNav', { index: 0 });
     await opDo('op:openVote', { segment: 'warmup' });
-    await voteWave('warmup', TL);
+    waves.push(await voteWave(sockets, 'warmup', TL));
     await opDo('op:lockVote', { segment: 'warmup' });
     await opDo('op:reveal', { segment: 'warmup' });
     await pace();
 
-    // Segment 1 — one round per storyteller (TRUTH/LIE)
     await opDo('op:gotoPhase', { phase: 'SEGMENT1' });
     for (const p of PLAYERS) {
       await opDo('op:selectStoryteller', { segment: 'segment1', playerId: p.id });
       await opDo('op:toggleSeg1Statement', {});
       await opDo('op:openVote', { segment: 'segment1' });
-      await voteWave(`seg1-p${p.id}`, TL);
+      waves.push(await voteWave(sockets, `seg1-p${p.id}`, TL));
       await opDo('op:lockVote', { segment: 'segment1' });
       await opDo('op:reveal', { segment: 'segment1' });
       await opDo('op:awardSegment', { segment: 'segment1' });
       await pace();
     }
 
-    // Segment 2 — one round per storyteller; reveal both statements first
     await opDo('op:gotoPhase', { phase: 'SEGMENT2' });
     for (const p of PLAYERS) {
       await opDo('op:selectStoryteller', { segment: 'segment2', playerId: p.id });
       await opDo('op:toggleStatement', { index: 0 });
       await opDo('op:toggleStatement', { index: 1 });
       await opDo('op:openVote', { segment: 'segment2' });
-      await voteWave(`seg2-p${p.id}`, (i) => (i % 2 ? 'STATEMENT_1' : 'STATEMENT_0'));
+      waves.push(await voteWave(sockets, `seg2-p${p.id}`, (i) => (i % 2 ? 'STATEMENT_1' : 'STATEMENT_0')));
       await opDo('op:lockVote', { segment: 'segment2' });
       await opDo('op:reveal', { segment: 'segment2' });
       await opDo('op:awardSegment', { segment: 'segment2' });
       await pace();
     }
 
-    // Segment 3 — guess the player (vote a player id)
     await opDo('op:gotoPhase', { phase: 'SEGMENT3' });
     await opDo('op:openVote', { segment: 'segment3' });
-    await voteWave('seg3', (i) => String(PLAYERS[i % PLAYERS.length].id));
+    waves.push(await voteWave(sockets, 'seg3', (i) => String(PLAYERS[i % PLAYERS.length].id)));
     await opDo('op:lockVote', { segment: 'segment3' });
     await opDo('op:awardSegment3', { winnerId: PLAYERS[0].id });
     await pace();
-
     await opDo('op:gotoPhase', { phase: 'FINAL' });
   }
 
-  const runWall = nowMs() - runStart;
-
-  // 4) Report
-  const allVoteMs = waves.flatMap((w) => w.ms);
-  const totalVotes = waves.reduce((a, w) => a + w.ok, 0);
-  const totalErrs = waves.reduce<Record<string, number>>((acc, w) => {
-    for (const [k, v] of Object.entries(w.errs)) acc[k] = (acc[k] ?? 0) + v;
-    return acc;
-  }, {});
-  console.log(`\n── Results: N=${N} | ${waves.length} vote round(s) | run wall: ${runWall.toFixed(0)}ms ──`);
-  console.log(`connected: ${connected}/${N}   votes accepted: ${totalVotes}/${N * waves.length}`);
-  stat('connect', connectMs);
-  stat('vote-ack', allVoteMs);
-  if (Object.keys(totalErrs).length) console.log('vote errors:', totalErrs);
-  else console.log('vote errors: none');
-
+  report(connectMs, connected, waves, nowMs() - runStart);
   sockets.forEach((s) => s?.close());
   op.close();
   await sleep(200);
   process.exit(0);
+}
+
+async function main() {
+  if (JOIN) await runJoin();
+  else await runDriver();
 }
 
 main().catch((e) => {
