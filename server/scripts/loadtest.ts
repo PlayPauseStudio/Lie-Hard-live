@@ -115,17 +115,20 @@ function openRoundKey(s: AudState | null): string | null {
   return null;
 }
 
-// A valid choice for voter i in the open round (derived from live state).
-function choiceFor(key: string, s: AudState, i: number): string {
-  if (key.startsWith('warmup') || key.startsWith('seg1')) return i % 2 ? 'LIE' : 'TRUTH';
+const randInt = (n: number) => Math.floor(Math.random() * n);
+
+// A random valid choice for the open round (derived from live state), so the
+// tally looks like real voting instead of a perfect alternating split.
+function choiceFor(key: string, s: AudState): string {
+  if (key.startsWith('warmup') || key.startsWith('seg1')) return Math.random() < 0.5 ? 'TRUTH' : 'LIE';
   if (key.startsWith('seg2')) {
     const st = s.segment2.statements.find((x) => x.playerId === s.segment2.currentStorytellerId);
     const k = st?.statements?.length ?? 2;
-    return `STATEMENT_${i % k}`;
+    return `STATEMENT_${randInt(k)}`;
   }
   if (key === 'seg3') {
     const ids = s.players.map((p) => p.id);
-    return ids.length ? String(ids[i % ids.length]) : '1';
+    return ids.length ? String(ids[randInt(ids.length)]) : '1';
   }
   return 'TRUTH';
 }
@@ -262,7 +265,7 @@ async function runJoin() {
     }
     console.log(`\n▶ round "${key}" is open — casting ${connected} votes`);
     const snapshot = store.state as AudState;
-    waves.push(await voteWave(sockets, key, (i) => choiceFor(key as string, snapshot, i)));
+    waves.push(await voteWave(sockets, key, () => choiceFor(key as string, snapshot)));
     lastKey = key;
     if (r < ROUNDS - 1) console.log('  (lock/reveal this round and open the next when ready…)');
   }
@@ -318,7 +321,7 @@ async function runDriver() {
   const { sockets, connectMs, connected } = await connectAudience(store);
 
   const waves: Wave[] = [];
-  const TL = (i: number) => (i % 2 ? 'LIE' : 'TRUTH');
+  const TL = () => (Math.random() < 0.5 ? 'TRUTH' : 'LIE');
   const runStart = nowMs();
 
   if (!GAME) {
@@ -353,7 +356,7 @@ async function runDriver() {
       await opDo('op:toggleStatement', { index: 0 });
       await opDo('op:toggleStatement', { index: 1 });
       await opDo('op:openVote', { segment: 'segment2' });
-      waves.push(await voteWave(sockets, `seg2-p${p.id}`, (i) => (i % 2 ? 'STATEMENT_1' : 'STATEMENT_0')));
+      waves.push(await voteWave(sockets, `seg2-p${p.id}`, () => `STATEMENT_${randInt(2)}`));
       await opDo('op:lockVote', { segment: 'segment2' });
       await opDo('op:reveal', { segment: 'segment2' });
       await opDo('op:awardSegment', { segment: 'segment2' });
@@ -362,7 +365,7 @@ async function runDriver() {
 
     await opDo('op:gotoPhase', { phase: 'SEGMENT3' });
     await opDo('op:openVote', { segment: 'segment3' });
-    waves.push(await voteWave(sockets, 'seg3', (i) => String(PLAYERS[i % PLAYERS.length].id)));
+    waves.push(await voteWave(sockets, 'seg3', () => String(PLAYERS[randInt(PLAYERS.length)].id)));
     await opDo('op:lockVote', { segment: 'segment3' });
     await opDo('op:awardSegment3', { winnerId: PLAYERS[0].id });
     await pace();
