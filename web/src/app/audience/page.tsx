@@ -165,6 +165,22 @@ export default function AudiencePage() {
     return () => unsub();
   }, []);
 
+  // Optional creative-team form. URL lives in control/config.audienceFormUrl.
+  // When set, the registration screen requires tapping it open once before
+  // Register unlocks — a soft gate (no submission tracking). Empty/unset means
+  // no gate and the normal flow. `formOpened` is local only (not persisted), so
+  // a returning viewer who's already registered never sees it again.
+  const [audienceFormUrl, setAudienceFormUrl] = useState("");
+  const [formOpened, setFormOpened] = useState(false);
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "control", "config"), (snap) => {
+      setAudienceFormUrl(
+        snap.exists() ? String(snap.data()?.audienceFormUrl ?? "") : "",
+      );
+    });
+    return () => unsub();
+  }, []);
+
   // Browser online status drives the "Reconnecting…" banner in backup mode.
   const [online, setOnline] = useState(true);
   useEffect(() => {
@@ -347,6 +363,10 @@ export default function AudiencePage() {
     }
     if (!phone.trim()) {
       setRegError("Please enter your phone number.");
+      return;
+    }
+    if (audienceFormUrl && !formOpened) {
+      setRegError("Please open the form first.");
       return;
     }
     setRegistering(true);
@@ -625,13 +645,36 @@ export default function AudiencePage() {
                 className="w-full rounded-xl px-4 py-3 text-white bg-gray-900 border border-gray-700 outline-none focus:border-orange-500 transition-colors"
               />
             </div>
+            {audienceFormUrl && (
+              <div className="rounded-xl border border-orange-500/40 bg-orange-500/5 p-4 space-y-2">
+                <p className="text-gray-300 text-sm text-center">
+                  One quick step — tap to open our form, then come back and
+                  continue.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.open(
+                      audienceFormUrl,
+                      "_blank",
+                      "noopener,noreferrer",
+                    );
+                    setFormOpened(true);
+                  }}
+                  className="w-full rounded-xl py-3 font-bold text-base bg-orange-500/90 text-white active:scale-95 transition-transform"
+                >
+                  {formOpened ? "✓ Opened — tap to reopen" : "Open the form ↗"}
+                </button>
+              </div>
+            )}
+
             {regError && (
               <p className="text-red-400 text-sm text-center">{regError}</p>
             )}
 
             <button
               type="submit"
-              disabled={registering}
+              disabled={registering || (!!audienceFormUrl && !formOpened)}
               className="w-full rounded-xl py-4 font-bold text-base bg-orange-500 text-white disabled:opacity-60 active:scale-95 transition-transform"
             >
               {registering ? "Saving..." : "Register & Continue →"}
