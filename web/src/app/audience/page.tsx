@@ -176,12 +176,14 @@ export default function AudiencePage() {
   // control/config. When shown + set, a button on this screen opens it in a new tab.
   const [audienceLinkUrl, setAudienceLinkUrl] = useState("");
   const [audienceLinkShown, setAudienceLinkShown] = useState(false);
+  const [audienceLinkLabel, setAudienceLinkLabel] = useState("");
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "control", "config"), (snap) => {
       const d = snap.exists() ? snap.data() : {};
       setAudienceFormUrl(String(d?.audienceFormUrl ?? ""));
       setAudienceLinkUrl(String(d?.audienceLinkUrl ?? ""));
       setAudienceLinkShown(Boolean(d?.audienceLinkShown));
+      setAudienceLinkLabel(String(d?.audienceLinkLabel ?? ""));
     });
     return () => unsub();
   }, []);
@@ -752,14 +754,26 @@ export default function AudiencePage() {
           </div>
         </div>
         {audienceLinkShown && audienceLinkUrl && (
-          <button
-            onClick={() =>
-              window.open(audienceLinkUrl, "_blank", "noopener,noreferrer")
-            }
-            className="w-full py-3 font-bold text-sm bg-orange-500 text-white active:scale-95 transition-transform"
-          >
-            Open link ↗
-          </button>
+          <div className="flex justify-center py-3">
+            <button
+              onClick={() =>
+                window.open(audienceLinkUrl, "_blank", "noopener,noreferrer")
+              }
+              className="inline-flex items-center font-display font-black uppercase leading-none active:scale-95 transition-transform"
+              style={{
+                padding: "0.7rem 1.15rem",
+                backgroundColor: "rgba(28,28,32,0.65)",
+                border: "2px solid #f59e0b",
+                borderRadius: "0.7rem",
+                boxShadow: "0 4px 24px rgba(0,0,0,0.55)",
+                color: "#f59e0b",
+                fontSize: "1.05rem",
+                letterSpacing: "0.02em",
+              }}
+            >
+              {audienceLinkLabel || "Open link ↗"}
+            </button>
+          </div>
         )}
       </>
     );

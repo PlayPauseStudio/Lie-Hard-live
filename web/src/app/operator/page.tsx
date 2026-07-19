@@ -402,7 +402,9 @@ export default function OperatorPage() {
   const [audienceLinkUrl, setAudienceLinkUrl] = useState("");
   const [audienceLinkShown, setAudienceLinkShown] = useState(false);
   const [linkInput, setLinkInput] = useState("");
+  const [linkLabelInput, setLinkLabelInput] = useState("");
   const linkFocused = useRef(false);
+  const labelFocused = useRef(false);
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "control", "config"), (snap) => {
       const d = snap.exists() ? snap.data() : {};
@@ -410,6 +412,8 @@ export default function OperatorPage() {
       setAudienceLinkUrl(url);
       setAudienceLinkShown(Boolean(d?.audienceLinkShown));
       if (!linkFocused.current) setLinkInput(url);
+      if (!labelFocused.current)
+        setLinkLabelInput(String(d?.audienceLinkLabel ?? ""));
     });
     return () => unsub();
   }, []);
@@ -417,6 +421,12 @@ export default function OperatorPage() {
     void setDoc(
       doc(db, "control", "config"),
       { audienceLinkUrl: url },
+      { merge: true },
+    );
+  const saveAudienceLinkLabel = (label: string) =>
+    void setDoc(
+      doc(db, "control", "config"),
+      { audienceLinkLabel: label },
       { merge: true },
     );
   const toggleAudienceLink = () =>
@@ -1253,6 +1263,18 @@ export default function OperatorPage() {
               }}
               onChange={(e) => setLinkInput(e.target.value)}
               placeholder="Paste link (form, video, …)"
+              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white text-xs outline-none focus:border-amber-500"
+            />
+            <input
+              type="text"
+              value={linkLabelInput}
+              onFocus={() => (labelFocused.current = true)}
+              onBlur={() => {
+                labelFocused.current = false;
+                saveAudienceLinkLabel(linkLabelInput.trim());
+              }}
+              onChange={(e) => setLinkLabelInput(e.target.value)}
+              placeholder="Button text (e.g. Fill the form)"
               className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white text-xs outline-none focus:border-amber-500"
             />
             {panelBtn(
