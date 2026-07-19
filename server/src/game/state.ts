@@ -59,6 +59,11 @@ export interface GameState {
   showScorePopup: boolean;
   showVoteBars: boolean;
   showLogo: boolean;
+  // Operator-pushed link button on the audience phones. Lives in game state (not
+  // Firestore) so it rides the same reliable channel as votes.
+  showAudienceLink: boolean;
+  audienceLink: string;
+  audienceLinkLabel: string;
   scorePopupDeltas: { name: string; delta: number }[];
   banterTimer: BanterTimer;
   warmup: {
@@ -128,6 +133,9 @@ export function initialGameState(): GameState {
     // Vote bars default OFF each round; the operator turns them on when wanted.
     showVoteBars: false,
     showLogo: false,
+    showAudienceLink: false,
+    audienceLink: '',
+    audienceLinkLabel: '',
     scorePopupDeltas: [],
     banterTimer: { totalSeconds: 60, startedAt: null, running: false },
     warmup: { statements: [], currentIndex: 0, audienceVotingOpen: false, showResult: false },

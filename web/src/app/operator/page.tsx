@@ -45,6 +45,9 @@ interface GameState {
   showScorePopup: boolean;
   showVoteBars: boolean;
   showLogo?: boolean;
+  showAudienceLink?: boolean;
+  audienceLink?: string;
+  audienceLinkLabel?: string;
   scorePopupDeltas: { name: string; delta: number }[];
   banterTimer: {
     totalSeconds: number;
@@ -399,42 +402,31 @@ export default function OperatorPage() {
   // Audience link button: any URL (form / video / …) the operator can push to the
   // audience phones, with a live SHOW/HIDE toggle. Stored in control/config so no
   // socket/server changes are needed — the audience already listens to that doc.
-  const [audienceLinkUrl, setAudienceLinkUrl] = useState("");
-  const [audienceLinkShown, setAudienceLinkShown] = useState(false);
+  // Values live in the game state (not Firestore) so they ride the socket like
+  // votes — reliable on phones. Local inputs mirror gameState (focus-guarded).
+  const audienceLink = gameState?.audienceLink ?? "";
+  const audienceLinkLabel = gameState?.audienceLinkLabel ?? "";
+  const audienceLinkShown = gameState?.showAudienceLink ?? false;
   const [linkInput, setLinkInput] = useState("");
   const [linkLabelInput, setLinkLabelInput] = useState("");
   const linkFocused = useRef(false);
   const labelFocused = useRef(false);
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "control", "config"), (snap) => {
-      const d = snap.exists() ? snap.data() : {};
-      const url = String(d?.audienceLinkUrl ?? "");
-      setAudienceLinkUrl(url);
-      setAudienceLinkShown(Boolean(d?.audienceLinkShown));
-      if (!linkFocused.current) setLinkInput(url);
-      if (!labelFocused.current)
-        setLinkLabelInput(String(d?.audienceLinkLabel ?? ""));
+    if (!linkFocused.current) setLinkInput(audienceLink);
+  }, [audienceLink]);
+  useEffect(() => {
+    if (!labelFocused.current) setLinkLabelInput(audienceLinkLabel);
+  }, [audienceLinkLabel]);
+  const saveAudienceLink = () =>
+    send(OP.SET_AUDIENCE_LINK, {
+      url: linkInput.trim(),
+      label: linkLabelInput.trim(),
     });
-    return () => unsub();
-  }, []);
-  const saveAudienceLink = (url: string) =>
-    void setDoc(
-      doc(db, "control", "config"),
-      { audienceLinkUrl: url },
-      { merge: true },
-    );
-  const saveAudienceLinkLabel = (label: string) =>
-    void setDoc(
-      doc(db, "control", "config"),
-      { audienceLinkLabel: label },
-      { merge: true },
-    );
   const toggleAudienceLink = () =>
-    void setDoc(
-      doc(db, "control", "config"),
-      { audienceLinkShown: !audienceLinkShown },
-      { merge: true },
-    );
+    send(OP.TOGGLE_DISPLAY, {
+      key: "showAudienceLink",
+      value: !audienceLinkShown,
+    });
 
   // Resize player name/photo arrays when count changes
   useEffect(() => {
@@ -1259,7 +1251,7 @@ export default function OperatorPage() {
               onFocus={() => (linkFocused.current = true)}
               onBlur={() => {
                 linkFocused.current = false;
-                saveAudienceLink(linkInput.trim());
+                saveAudienceLink();
               }}
               onChange={(e) => setLinkInput(e.target.value)}
               placeholder="Paste link (form, video, …)"
@@ -1271,7 +1263,7 @@ export default function OperatorPage() {
               onFocus={() => (labelFocused.current = true)}
               onBlur={() => {
                 labelFocused.current = false;
-                saveAudienceLinkLabel(linkLabelInput.trim());
+                saveAudienceLink();
               }}
               onChange={(e) => setLinkLabelInput(e.target.value)}
               placeholder="Button text (e.g. Fill the form)"
@@ -1285,7 +1277,7 @@ export default function OperatorPage() {
                 backgroundColor: "transparent",
                 color: audienceLinkShown ? "#4ade80" : "#52525b",
               },
-              !linkInput.trim() && !audienceLinkUrl,
+              !linkInput.trim() && !audienceLink,
             )}
           </div>
 

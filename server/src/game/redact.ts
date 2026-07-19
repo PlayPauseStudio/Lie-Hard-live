@@ -12,6 +12,10 @@ export type Role = 'operator' | 'display' | 'audience';
 export interface AudienceGameState {
   phase: GameState['phase'];
   players: { id: number; name: string; photo: string; score: number }[];
+  // Operator-pushed link button (rides the socket so it's as reliable as votes).
+  showAudienceLink: boolean;
+  audienceLink: string;
+  audienceLinkLabel: string;
   warmup: {
     statements: { statement: string }[];
     currentIndex: number;
@@ -43,6 +47,9 @@ export function audienceView(gs: GameState): AudienceGameState {
   return {
     phase: gs.phase,
     players: gs.players.map((p) => ({ id: p.id, name: p.name, photo: p.photo, score: p.score })),
+    showAudienceLink: gs.showAudienceLink ?? false,
+    audienceLink: gs.audienceLink ?? '',
+    audienceLinkLabel: gs.audienceLinkLabel ?? '',
     warmup: {
       statements: gs.warmup.statements.map((s) => ({ statement: s.statement })),
       currentIndex: gs.warmup.currentIndex,

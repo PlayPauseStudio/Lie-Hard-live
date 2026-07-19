@@ -107,6 +107,10 @@ export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): vo
     apply(R.setSegmentPoints(store.getState(), d.segment, d.points)),
   );
 
+  on(OP.SET_AUDIENCE_LINK, S.setAudienceLinkSchema, (d) =>
+    apply(R.setAudienceLink(store.getState(), d.url, d.label)),
+  );
+
   on(OP.ADJUST_SCORE, S.adjustScoreSchema, (d) =>
     apply(R.adjustScore(store.getState(), d.playerId, d.delta)),
   );

@@ -18,7 +18,8 @@ export type DisplayKey =
   | 'showScorePopup'
   | 'showVoteBars'
   | 'showLogo'
-  | 'showTopVoters';
+  | 'showTopVoters'
+  | 'showAudienceLink';
 
 function emptyPlayerVotes(players: Player[]): Record<number, null> {
   return Object.fromEntries(players.map((p) => [p.id, null]));
@@ -157,6 +158,12 @@ export function setSegmentPoints(
   points: number,
 ): Patch {
   return { [segment]: { ...state[segment], points } } as Patch;
+}
+
+// ── Audience link button (URL + label; shown via toggleDisplay) ───────────────
+
+export function setAudienceLink(_state: GameState, url: string, label: string): Patch {
+  return { audienceLink: url, audienceLinkLabel: label };
 }
 
 // ── Operator-logged player votes (seg1 / seg2) ───────────────────────────────

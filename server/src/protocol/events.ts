@@ -23,6 +23,7 @@ export const OP = {
   AWARD_SEGMENT: 'op:awardSegment',
   AWARD_SEGMENT3: 'op:awardSegment3',
   SET_SEGMENT_POINTS: 'op:setSegmentPoints',
+  SET_AUDIENCE_LINK: 'op:setAudienceLink',
   ADJUST_SCORE: 'op:adjustScore',
   TOGGLE_DISPLAY: 'op:toggleDisplay',
   TIMER_START: 'op:timerStart',

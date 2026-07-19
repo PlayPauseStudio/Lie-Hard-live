@@ -16,6 +16,7 @@ const displayKey = z.enum([
   'showVoteBars',
   'showLogo',
   'showTopVoters',
+  'showAudienceLink',
 ]);
 
 const shortStr = z.string().max(500);
@@ -99,6 +100,10 @@ export const awardSegment3Schema = z.object({ winnerId: z.number().int() });
 export const setSegmentPointsSchema = z.object({
   segment: z.enum(['segment1', 'segment2', 'segment3']),
   points: z.number().int().min(0).max(100_000),
+});
+export const setAudienceLinkSchema = z.object({
+  url: z.string().max(2000),
+  label: z.string().max(120),
 });
 export const adjustScoreSchema = z.object({
   playerId: z.number().int(),

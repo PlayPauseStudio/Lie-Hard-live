@@ -52,6 +52,9 @@ interface Segment2Statement {
 interface GameState {
   phase: "SETUP" | "WARMUP" | "SEGMENT1" | "SEGMENT2" | "SEGMENT3" | "FINAL";
   players: Player[];
+  showAudienceLink?: boolean;
+  audienceLink?: string;
+  audienceLinkLabel?: string;
   warmup: {
     statements: WarmupStatement[];
     currentIndex: number;
@@ -176,20 +179,15 @@ export default function AudiencePage() {
   // Register unlocks — a soft gate (no submission tracking). Empty/unset means
   // no gate and the normal flow. `formOpened` is local only (not persisted), so
   // a returning viewer who's already registered never sees it again.
+  // The registration-screen form URL stays in control/config because it's needed
+  // BEFORE the audience joins the game (no socket/gameState yet). The in-game link
+  // button lives in gameState instead (read below), so it rides the socket.
   const [audienceFormUrl, setAudienceFormUrl] = useState("");
   const [formOpened, setFormOpened] = useState(false);
-  // Operator-pushed link button (any URL) with a live SHOW/HIDE toggle, both from
-  // control/config. When shown + set, a button on this screen opens it in a new tab.
-  const [audienceLinkUrl, setAudienceLinkUrl] = useState("");
-  const [audienceLinkShown, setAudienceLinkShown] = useState(false);
-  const [audienceLinkLabel, setAudienceLinkLabel] = useState("");
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "control", "config"), (snap) => {
       const d = snap.exists() ? snap.data() : {};
       setAudienceFormUrl(String(d?.audienceFormUrl ?? ""));
-      setAudienceLinkUrl(String(d?.audienceLinkUrl ?? ""));
-      setAudienceLinkShown(Boolean(d?.audienceLinkShown));
-      setAudienceLinkLabel(String(d?.audienceLinkLabel ?? ""));
     });
     return () => unsub();
   }, []);
@@ -809,10 +807,12 @@ export default function AudiencePage() {
             </button>
           </div>
         </div>
-        {audienceLinkShown && audienceLinkUrl && (
+        {gameState?.showAudienceLink && gameState?.audienceLink && (
           <div className="px-4 py-3">
             <button
-              onClick={() => window.open(audienceLinkUrl, "_blank")}
+              onClick={() =>
+                window.open(gameState?.audienceLink ?? "", "_blank")
+              }
               className="w-full inline-flex items-center justify-center gap-2 font-display font-black uppercase leading-none active:scale-95 transition-transform"
               style={{
                 padding: "1.35rem 1.15rem",
@@ -825,7 +825,7 @@ export default function AudiencePage() {
                 letterSpacing: "0.02em",
               }}
             >
-              {audienceLinkLabel || "Open link"}
+              {gameState?.audienceLinkLabel || "Open link"}
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
