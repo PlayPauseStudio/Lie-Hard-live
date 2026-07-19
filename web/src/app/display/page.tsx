@@ -434,22 +434,34 @@ function Scoreboard({
 function LeaderboardModal({ players }: { players: Player[] }) {
   const sorted = [...players].sort((a, b) => b.score - a.score);
 
+  // Ranks 4+ append to the right of 3rd place with progressively shorter
+  // podiums; the classic 2-1-3 podium (sizes/heights/order) is left untouched
+  // (extras is empty for exactly 3 players).
+  const extras = sorted.slice(3);
   const podium =
     sorted.length >= 3
-      ? [sorted[1], sorted[0], sorted[2]]
+      ? [sorted[1], sorted[0], sorted[2], ...extras]
       : sorted.length === 2
         ? [sorted[1], sorted[0]]
         : sorted;
   const podiumRank =
-    sorted.length >= 3 ? [2, 1, 3] : sorted.length === 2 ? [2, 1] : [1];
+    sorted.length >= 3
+      ? [2, 1, 3, ...extras.map((_, i) => 4 + i)]
+      : sorted.length === 2
+        ? [2, 1]
+        : [1];
   const vwSizes =
     sorted.length >= 3
-      ? [13, 16.5, 11.5]
+      ? [13, 16.5, 11.5, ...extras.map((_, i) => Math.max(7, 10 - i * 1.5))]
       : sorted.length === 2
         ? [13.5, 16.5]
         : [17];
   const blockVh =
-    sorted.length >= 3 ? [20, 30, 14] : sorted.length === 2 ? [20, 30] : [30];
+    sorted.length >= 3
+      ? [20, 30, 14, ...extras.map((_, i) => Math.max(5, 9 - i * 2))]
+      : sorted.length === 2
+        ? [20, 30]
+        : [30];
 
   const rankBorder = (r: number) =>
     r === 1 ? "#fbbf24" : r === 2 ? "#94a3b8" : "#cd7c2f";
@@ -1814,7 +1826,7 @@ function Segment3Screen({ gameState }: { gameState: GameState }) {
         }}
       >
         <p
-          className="font-display font-bold text-white tracking-wide"
+          className="font-display font-bold uppercase tracking-widest leading-none text-white"
           style={{ fontSize: "clamp(18px, 2.5vw, 48px)" }}
         >
           Who does this belong to?
