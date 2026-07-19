@@ -396,6 +396,36 @@ export default function OperatorPage() {
     );
   };
 
+  // Audience link button: any URL (form / video / …) the operator can push to the
+  // audience phones, with a live SHOW/HIDE toggle. Stored in control/config so no
+  // socket/server changes are needed — the audience already listens to that doc.
+  const [audienceLinkUrl, setAudienceLinkUrl] = useState("");
+  const [audienceLinkShown, setAudienceLinkShown] = useState(false);
+  const [linkInput, setLinkInput] = useState("");
+  const linkFocused = useRef(false);
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "control", "config"), (snap) => {
+      const d = snap.exists() ? snap.data() : {};
+      const url = String(d?.audienceLinkUrl ?? "");
+      setAudienceLinkUrl(url);
+      setAudienceLinkShown(Boolean(d?.audienceLinkShown));
+      if (!linkFocused.current) setLinkInput(url);
+    });
+    return () => unsub();
+  }, []);
+  const saveAudienceLink = (url: string) =>
+    void setDoc(
+      doc(db, "control", "config"),
+      { audienceLinkUrl: url },
+      { merge: true },
+    );
+  const toggleAudienceLink = () =>
+    void setDoc(
+      doc(db, "control", "config"),
+      { audienceLinkShown: !audienceLinkShown },
+      { merge: true },
+    );
+
   // Resize player name/photo arrays when count changes
   useEffect(() => {
     setPlayerNames((prev) =>
@@ -1210,6 +1240,30 @@ export default function OperatorPage() {
             )}
             {gameState.showTopVoters && (
               <TopVotersPanel voterScores={gameState.voterScores ?? {}} />
+            )}
+
+            {/* Audience link button — any URL (form / video / …), shown on phones */}
+            <input
+              type="url"
+              value={linkInput}
+              onFocus={() => (linkFocused.current = true)}
+              onBlur={() => {
+                linkFocused.current = false;
+                saveAudienceLink(linkInput.trim());
+              }}
+              onChange={(e) => setLinkInput(e.target.value)}
+              placeholder="Paste link (form, video, …)"
+              className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white text-xs outline-none focus:border-amber-500"
+            />
+            {panelBtn(
+              audienceLinkShown ? "● Link button ON" : "○ Link button OFF",
+              toggleAudienceLink,
+              {
+                border: "1px solid #27272a",
+                backgroundColor: "transparent",
+                color: audienceLinkShown ? "#4ade80" : "#52525b",
+              },
+              !linkInput.trim() && !audienceLinkUrl,
             )}
           </div>
 

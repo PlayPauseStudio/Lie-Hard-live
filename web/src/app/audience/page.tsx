@@ -172,11 +172,16 @@ export default function AudiencePage() {
   // a returning viewer who's already registered never sees it again.
   const [audienceFormUrl, setAudienceFormUrl] = useState("");
   const [formOpened, setFormOpened] = useState(false);
+  // Operator-pushed link button (any URL) with a live SHOW/HIDE toggle, both from
+  // control/config. When shown + set, a button on this screen opens it in a new tab.
+  const [audienceLinkUrl, setAudienceLinkUrl] = useState("");
+  const [audienceLinkShown, setAudienceLinkShown] = useState(false);
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "control", "config"), (snap) => {
-      setAudienceFormUrl(
-        snap.exists() ? String(snap.data()?.audienceFormUrl ?? "") : "",
-      );
+      const d = snap.exists() ? snap.data() : {};
+      setAudienceFormUrl(String(d?.audienceFormUrl ?? ""));
+      setAudienceLinkUrl(String(d?.audienceLinkUrl ?? ""));
+      setAudienceLinkShown(Boolean(d?.audienceLinkShown));
     });
     return () => unsub();
   }, []);
@@ -746,6 +751,16 @@ export default function AudiencePage() {
             </button>
           </div>
         </div>
+        {audienceLinkShown && audienceLinkUrl && (
+          <button
+            onClick={() =>
+              window.open(audienceLinkUrl, "_blank", "noopener,noreferrer")
+            }
+            className="w-full py-3 font-bold text-sm bg-orange-500 text-white active:scale-95 transition-transform"
+          >
+            Open link ↗
+          </button>
+        )}
       </>
     );
   }
