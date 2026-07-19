@@ -2238,41 +2238,48 @@ export default function DisplayPage() {
                 </span>
               </div>
             </div>
-            {/* Banter timer — sits directly below the voting status pill */}
-            {isTimerRunning && (
-              <div
-                className="absolute animate-fade-in"
-                style={{ top: "calc(100% + 0.6vw)", left: 0, right: 0 }}
-              >
-                <div
-                  className="flex items-center justify-center"
-                  style={{
-                    padding: "0.5vw 1.2vw",
-                    borderRadius: "1vw",
-                    backgroundColor: timerUrgent
-                      ? "rgba(25,4,4,0.96)"
-                      : "rgba(8,8,10,0.96)",
-                    border: `2px solid ${timerUrgent ? "#f87171" : "#f59e0b"}`,
-                    boxShadow: timerUrgent
-                      ? "0 0 1.5vw rgba(248,113,113,0.25)"
-                      : "0 0 1.5vw rgba(245,158,11,0.15)",
-                  }}
-                >
-                  <span
-                    className="font-display font-black tabular-nums leading-none"
-                    style={{
-                      fontSize: "clamp(22px, 3vw, 60px)",
-                      color: timerUrgent ? "#f87171" : "#f59e0b",
-                      textShadow: timerUrgent
-                        ? "0 0 1vw rgba(248,113,113,0.5)"
-                        : "0 0 1vw rgba(245,158,11,0.3)",
-                    }}
-                  >
-                    {timerMins}:{timerSecs}
-                  </span>
-                </div>
-              </div>
-            )}
+          </div>
+        </div>
+      )}
+
+      {/* Banter timer — floats just below the pill's level: top-right normally,
+          top-left in Round 3 (same top position, mirrored to the other side). */}
+      {!hideTopBar && isTimerRunning && (
+        <div
+          className="absolute z-30 animate-fade-in"
+          style={{
+            top: "8.2vw",
+            ...(gameState.phase === "SEGMENT3"
+              ? { left: "1.25vw" }
+              : { right: "1.25vw" }),
+          }}
+        >
+          <div
+            className="flex items-center justify-center"
+            style={{
+              padding: "0.5vw 1.2vw",
+              borderRadius: "1vw",
+              backgroundColor: timerUrgent
+                ? "rgba(25,4,4,0.96)"
+                : "rgba(8,8,10,0.96)",
+              border: `2px solid ${timerUrgent ? "#f87171" : "#f59e0b"}`,
+              boxShadow: timerUrgent
+                ? "0 0 1.5vw rgba(248,113,113,0.25)"
+                : "0 0 1.5vw rgba(245,158,11,0.15)",
+            }}
+          >
+            <span
+              className="font-display font-black tabular-nums leading-none"
+              style={{
+                fontSize: "clamp(22px, 3vw, 60px)",
+                color: timerUrgent ? "#f87171" : "#f59e0b",
+                textShadow: timerUrgent
+                  ? "0 0 1vw rgba(248,113,113,0.5)"
+                  : "0 0 1vw rgba(245,158,11,0.3)",
+              }}
+            >
+              {timerMins}:{timerSecs}
+            </span>
           </div>
         </div>
       )}

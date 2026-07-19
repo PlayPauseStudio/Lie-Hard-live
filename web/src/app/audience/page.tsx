@@ -754,14 +754,14 @@ export default function AudiencePage() {
           </div>
         </div>
         {audienceLinkShown && audienceLinkUrl && (
-          <div className="flex justify-center py-3">
+          <div className="px-4 py-3">
             <button
               onClick={() =>
                 window.open(audienceLinkUrl, "_blank", "noopener,noreferrer")
               }
-              className="inline-flex items-center font-display font-black uppercase leading-none active:scale-95 transition-transform"
+              className="w-full inline-flex items-center justify-center gap-2 font-display font-black uppercase leading-none active:scale-95 transition-transform"
               style={{
-                padding: "0.7rem 1.15rem",
+                padding: "1.05rem 1.15rem",
                 backgroundColor: "rgba(28,28,32,0.65)",
                 border: "2px solid #f59e0b",
                 borderRadius: "0.7rem",
@@ -771,7 +771,19 @@ export default function AudiencePage() {
                 letterSpacing: "0.02em",
               }}
             >
-              {audienceLinkLabel || "Open link ↗"}
+              {audienceLinkLabel || "Open link"}
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ width: "1.05em", height: "1.05em", flexShrink: 0 }}
+                aria-hidden="true"
+              >
+                <path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              </svg>
             </button>
           </div>
         )}
