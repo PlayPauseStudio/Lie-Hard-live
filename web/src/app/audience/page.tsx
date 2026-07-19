@@ -761,13 +761,13 @@ export default function AudiencePage() {
               }
               className="w-full inline-flex items-center justify-center gap-2 font-display font-black uppercase leading-none active:scale-95 transition-transform"
               style={{
-                padding: "1.05rem 1.15rem",
+                padding: "1.35rem 1.15rem",
                 backgroundColor: "rgba(28,28,32,0.65)",
                 border: "2px solid #f59e0b",
                 borderRadius: "0.7rem",
                 boxShadow: "0 4px 24px rgba(0,0,0,0.55)",
                 color: "#f59e0b",
-                fontSize: "1.05rem",
+                fontSize: "1.35rem",
                 letterSpacing: "0.02em",
               }}
             >
