@@ -125,7 +125,8 @@ export function initialGameState(): GameState {
     showLeaderboardModal: false,
     showTopVoters: false,
     showScorePopup: false,
-    showVoteBars: true,
+    // Vote bars default OFF each round; the operator turns them on when wanted.
+    showVoteBars: false,
     showLogo: false,
     scorePopupDeltas: [],
     banterTimer: { totalSeconds: 60, startedAt: null, running: false },

@@ -60,7 +60,8 @@ export function buildStartState(payload: StartShowPayload): GameState {
 }
 
 export function gotoPhase(_state: GameState, phase: Phase): Patch {
-  return { phase };
+  // Vote bars default OFF at the start of each round/segment; operator opts in.
+  return { phase, showVoteBars: false };
 }
 
 // ── Warmup ──────────────────────────────────────────────────────────────────
@@ -69,6 +70,7 @@ export function warmupNav(state: GameState, index: number): Patch {
   return {
     warmup: { ...state.warmup, currentIndex: index, audienceVotingOpen: false, showResult: false },
     audienceVotes: {},
+    showVoteBars: false,
   };
 }
 
@@ -119,6 +121,8 @@ export function selectStoryteller(state: GameState, segment: SegmentKey, playerI
   const playerVotes = emptyPlayerVotes(state.players);
   if (segment === 'segment1') {
     return {
+      // Vote bars default OFF for each new storyteller's round; operator opts in.
+      showVoteBars: false,
       segment1: {
         ...state.segment1,
         currentStorytellerId: playerId,
@@ -132,6 +136,7 @@ export function selectStoryteller(state: GameState, segment: SegmentKey, playerI
     };
   }
   return {
+    showVoteBars: false,
     segment2: {
       ...state.segment2,
       currentStorytellerId: playerId,
