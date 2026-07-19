@@ -2,7 +2,13 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { doc, onSnapshot, updateDoc } from "firebase/firestore";
+import {
+  doc,
+  onSnapshot,
+  updateDoc,
+  disableNetwork,
+  enableNetwork,
+} from "firebase/firestore";
 import {
   GoogleAuthProvider,
   onAuthStateChanged,
@@ -188,17 +194,60 @@ export default function AudiencePage() {
     return () => unsub();
   }, []);
 
+  // Restore the "form opened" gate after a background-tab reload (mobile), so a
+  // viewer who already opened the form isn't re-blocked from registering.
+  useEffect(() => {
+    try {
+      if (
+        audienceFormUrl &&
+        localStorage.getItem("lh_formOpened:" + audienceFormUrl)
+      ) {
+        setFormOpened(true);
+      }
+    } catch {
+      /* storage unavailable — fine */
+    }
+  }, [audienceFormUrl]);
+
   // Browser online status drives the "Reconnecting…" banner in backup mode.
+  // Phones freeze background tabs; on wake, Firestore's socket can stay wedged
+  // (matters in backup mode + for the voters/config listeners). `online` only
+  // fires on network changes, so we also toggle the network on `visibilitychange`
+  // to force a resync.
   const [online, setOnline] = useState(true);
   useEffect(() => {
-    const on = () => setOnline(true);
+    let reconnecting = false;
+    const reconnect = async () => {
+      if (reconnecting) return;
+      reconnecting = true;
+      try {
+        await disableNetwork(db);
+        await enableNetwork(db);
+      } catch {
+        /* best-effort resync */
+      } finally {
+        reconnecting = false;
+      }
+    };
+    const on = () => {
+      setOnline(true);
+      void reconnect();
+    };
     const off = () => setOnline(false);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        if (typeof navigator !== "undefined") setOnline(navigator.onLine);
+        void reconnect();
+      }
+    };
     if (typeof navigator !== "undefined") setOnline(navigator.onLine);
     window.addEventListener("online", on);
     window.addEventListener("offline", off);
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       window.removeEventListener("online", on);
       window.removeEventListener("offline", off);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
 
@@ -661,12 +710,19 @@ export default function AudiencePage() {
                 <button
                   type="button"
                   onClick={() => {
-                    window.open(
-                      audienceFormUrl,
-                      "_blank",
-                      "noopener,noreferrer",
-                    );
+                    // No window-features string: some mobile browsers block the
+                    // new tab when one is present. Persist so a background-tab
+                    // reload doesn't re-lock Register after they open the form.
+                    window.open(audienceFormUrl, "_blank");
                     setFormOpened(true);
+                    try {
+                      localStorage.setItem(
+                        "lh_formOpened:" + audienceFormUrl,
+                        "1",
+                      );
+                    } catch {
+                      /* storage unavailable — fine */
+                    }
                   }}
                   className="w-full rounded-xl py-3 font-bold text-base bg-orange-500/90 text-white active:scale-95 transition-transform"
                 >
@@ -756,9 +812,7 @@ export default function AudiencePage() {
         {audienceLinkShown && audienceLinkUrl && (
           <div className="px-4 py-3">
             <button
-              onClick={() =>
-                window.open(audienceLinkUrl, "_blank", "noopener,noreferrer")
-              }
+              onClick={() => window.open(audienceLinkUrl, "_blank")}
               className="w-full inline-flex items-center justify-center gap-2 font-display font-black uppercase leading-none active:scale-95 transition-transform"
               style={{
                 padding: "1.35rem 1.15rem",
