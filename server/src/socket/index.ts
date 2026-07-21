@@ -7,6 +7,7 @@ import { socketAuthMiddleware } from '../auth/socketAuth';
 import type { RoomStore } from '../game/store';
 import type { GameMirror } from '../persistence/gameMirror';
 import { Broadcaster } from './broadcast';
+import { getVoter } from '../persistence/voters';
 import { registerOperatorHandlers } from './handlers/operator';
 import { registerAudienceHandlers } from './handlers/audience';
 import { type AppServer, type AppSocket, ROOM_FULL, ROOM_AUDIENCE } from './types';
@@ -53,6 +54,19 @@ export function createIo(httpServer: HttpServer, store: RoomStore, mirror?: Game
     const ctx = { store, broadcaster };
     registerOperatorHandlers(socket, ctx);
     registerAudienceHandlers(socket, ctx, voteLimiter);
+
+    // Load the registered voter name onto the socket UP FRONT (not just on the
+    // first vote). socket.data is rebuilt on every (re)connect and the token
+    // carries no name for email/password logins, so without this a vote after a
+    // reconnect would be stored nameless and voterScores would fall back to the
+    // raw uid. Fire-and-forget: it resolves well before the first vote.
+    if (role === 'audience' && socket.data.uid && !socket.data.name) {
+      getVoter(socket.data.uid)
+        .then((v) => {
+          if (v?.name) socket.data.name = v.name;
+        })
+        .catch(() => {});
+    }
 
     // Send current state immediately on join / reconnect.
     broadcaster.sendFullTo(socket);

@@ -16,7 +16,10 @@ export function awardVoterScores(
   for (const [uid, v] of Object.entries(gs.audienceVotes)) {
     if (v.votingRound === votingRound && v.choice === correctChoice) {
       next[uid] = {
-        name: v.displayName ?? uid,
+        // Prefer this vote's name, then a name we already had for this voter, and
+        // only fall back to the raw uid if we've truly never seen a name — so a
+        // nameless vote (e.g. right after a reconnect) can't clobber a good name.
+        name: v.displayName ?? gs.voterScores[uid]?.name ?? uid,
         correctCount: (gs.voterScores[uid]?.correctCount ?? 0) + 1,
       };
     }
