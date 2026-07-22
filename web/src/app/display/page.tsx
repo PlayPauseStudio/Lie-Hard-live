@@ -431,7 +431,13 @@ function Scoreboard({
 
 // ── Leaderboard modal ──────────────────────────────────────────────────────
 
-function LeaderboardModal({ players }: { players: Player[] }) {
+function LeaderboardModal({
+  players,
+  scoreArrows = {},
+}: {
+  players: Player[];
+  scoreArrows?: Record<number, "up" | "down">;
+}) {
   const sorted = [...players].sort((a, b) => b.score - a.score);
 
   // Ranks 4+ append to the right of 3rd place with progressively shorter
@@ -564,15 +570,34 @@ function LeaderboardModal({ players }: { players: Player[] }) {
               >
                 {player.name}
               </p>
-              <p
-                className="font-display font-black"
-                style={{
-                  color: isFirst ? "#f59e0b" : "#e4e4e7",
-                  fontSize: "clamp(32px, 3.4vw, 68px)",
-                }}
-              >
-                {player.score} pts
-              </p>
+              <div className="flex items-center" style={{ gap: "0.5vw" }}>
+                <p
+                  className="font-display font-black"
+                  style={{
+                    color: isFirst ? "#f59e0b" : "#e4e4e7",
+                    fontSize: "clamp(32px, 3.4vw, 68px)",
+                  }}
+                >
+                  {player.score} pts
+                </p>
+                {scoreArrows[player.id] && (
+                  <span
+                    className="font-black leading-none animate-bounce"
+                    style={{
+                      color:
+                        scoreArrows[player.id] === "up" ? "#4ade80" : "#f87171",
+                      fontSize: "clamp(26px, 2.8vw, 56px)",
+                      textShadow: `0 0 1vw ${
+                        scoreArrows[player.id] === "up"
+                          ? "rgba(74,222,128,0.55)"
+                          : "rgba(248,113,113,0.55)"
+                      }`,
+                    }}
+                  >
+                    {scoreArrows[player.id] === "up" ? "▲" : "▼"}
+                  </span>
+                )}
+              </div>
               {/* Podium block */}
               <div
                 className="rounded-t-2xl flex items-center justify-center"
@@ -1948,6 +1973,19 @@ export default function DisplayPage() {
   const { gameState } = useGameState<GameState>("display");
   const prevScoresRef = useRef<Record<number, number>>({});
   const [highlightedIds, setHighlightedIds] = useState<Set<number>>(new Set());
+  // Directional score-change arrows for the leaderboard. Tracked here (not in the
+  // modal) and always running, so if the leaderboard is opened mid-change the
+  // arrow is still on screen. Each entry auto-clears 5s after that player changed.
+  const [scoreArrows, setScoreArrows] = useState<Record<number, "up" | "down">>(
+    {},
+  );
+  const arrowTimersRef = useRef<Record<number, ReturnType<typeof setTimeout>>>(
+    {},
+  );
+  useEffect(() => {
+    const timers = arrowTimersRef.current;
+    return () => Object.values(timers).forEach(clearTimeout);
+  }, []);
   const [timerDisplay, setTimerDisplay] = useState(0);
   const timerTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -1982,15 +2020,32 @@ export default function DisplayPage() {
   useEffect(() => {
     if (!gameState) return;
     const changed = new Set<number>();
+    const dirs: Record<number, "up" | "down"> = {};
     gameState.players.forEach((p) => {
-      if (
-        prevScoresRef.current[p.id] !== undefined &&
-        prevScoresRef.current[p.id] !== p.score
-      ) {
+      const prev = prevScoresRef.current[p.id];
+      if (prev !== undefined && prev !== p.score) {
         changed.add(p.id);
+        dirs[p.id] = p.score > prev ? "up" : "down";
       }
       prevScoresRef.current[p.id] = p.score;
     });
+    // Leaderboard arrows: each changed player shows a directional arrow for 5s,
+    // on its own timer so staggered changes don't cut each other short.
+    const changedIds = Object.keys(dirs).map(Number);
+    if (changedIds.length > 0) {
+      setScoreArrows((prev) => ({ ...prev, ...dirs }));
+      for (const id of changedIds) {
+        clearTimeout(arrowTimersRef.current[id]);
+        arrowTimersRef.current[id] = setTimeout(() => {
+          setScoreArrows((prev) => {
+            const next = { ...prev };
+            delete next[id];
+            return next;
+          });
+          delete arrowTimersRef.current[id];
+        }, 5000);
+      }
+    }
     if (changed.size > 0) {
       setHighlightedIds(changed);
       const t = setTimeout(() => setHighlightedIds(new Set()), 2500);
@@ -2376,7 +2431,9 @@ export default function DisplayPage() {
       )}
 
       {/* Leaderboard modal */}
-      {showLeaderboardModal && <LeaderboardModal players={players} />}
+      {showLeaderboardModal && (
+        <LeaderboardModal players={players} scoreArrows={scoreArrows} />
+      )}
 
       {/* Show Logo overlay — above all other overlays */}
       {(gameState.showLogo ?? false) && (
