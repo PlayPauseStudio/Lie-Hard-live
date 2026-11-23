@@ -5,10 +5,9 @@ import { logger } from '../util/logger';
 import { TokenBucketLimiter } from '../util/rateLimit';
 import { socketAuthMiddleware } from '../auth/socketAuth';
 import type { RoomStore } from '../game/store';
-import type { GameMirror } from '../persistence/gameMirror';
 import { Broadcaster } from './broadcast';
 import { getVoter } from '../persistence/voters';
-import { registerOperatorHandlers } from './handlers/operator';
+import { registerOperatorHandlers, type ServerInfo } from './handlers/operator';
 import { registerAudienceHandlers } from './handlers/audience';
 import { type AppServer, type AppSocket, ROOM_FULL, ROOM_AUDIENCE } from './types';
 
@@ -17,7 +16,13 @@ export interface RealtimeServer {
   broadcaster: Broadcaster;
 }
 
-export function createIo(httpServer: HttpServer, store: RoomStore, mirror?: GameMirror): RealtimeServer {
+/** Server facts the status strip needs that live outside the socket layer. */
+export interface ServerFacts {
+  snapshots: ServerInfo['snapshots'];
+  lastSavedAt: ServerInfo['lastSavedAt'];
+}
+
+export function createIo(httpServer: HttpServer, store: RoomStore, facts: ServerFacts): RealtimeServer {
   const io: AppServer = new Server(httpServer, {
     cors: {
       origin: env.ALLOWED_ORIGINS,
@@ -35,8 +40,23 @@ export function createIo(httpServer: HttpServer, store: RoomStore, mirror?: Game
   const sweep = setInterval(() => voteLimiter.sweep(), 60_000);
   sweep.unref?.();
 
-  const broadcaster = new Broadcaster(io, store, mirror);
+  const broadcaster = new Broadcaster(io, store);
   broadcaster.start();
+
+  const info: ServerInfo = {
+    online: () => {
+      const online = { operators: 0, displays: 0, phones: 0 };
+      for (const s of io.sockets.sockets.values()) {
+        const role = (s as AppSocket).data.role;
+        if (role === 'operator') online.operators++;
+        else if (role === 'display') online.displays++;
+        else if (role === 'audience') online.phones++;
+      }
+      return online;
+    },
+    snapshots: facts.snapshots,
+    lastSavedAt: facts.lastSavedAt,
+  };
 
   io.use(socketAuthMiddleware);
 
@@ -51,7 +71,7 @@ export function createIo(httpServer: HttpServer, store: RoomStore, mirror?: Game
     // role guard and replies with an explicit `forbidden` ack when the role is
     // wrong — so a non-operator emitting op:* always gets a response (never a
     // silent hang) and can never mutate state (defense in depth).
-    const ctx = { store, broadcaster };
+    const ctx = { store, broadcaster, info };
     registerOperatorHandlers(socket, ctx);
     registerAudienceHandlers(socket, ctx, voteLimiter);
 

@@ -12,13 +12,12 @@ server/  Express + Socket.IO backend — the authority for game state → Railwa
   only (audience sign-in). Game state lives on the server, not in Firestore.
 - Full backend docs: [`server/README.md`](server/README.md).
 
-This is the version you run the show on. The **no-server backup** is the separate
-`lie-hard/` repo (original direct-Firestore app) — see "Show-day fallback" below.
+This is the only version you run the show on. The old no-server backup (`lie-hard/`)
+is retired: nothing here connects to it any more.
 
 ## Firebase project
 
-`web/` targets a **dedicated Firebase project** (`lie-hard-live`) — separate from the
-backup's `lie-hard` project. Create it in the console, enable Google + Email/Password
+`web/` targets a **dedicated Firebase project** (`lie-hard-live`). Create it in the console, enable Google + Email/Password
 auth, then fill `web/.env.production` from `web/.env.example`.
 
 ## Deploy
@@ -32,8 +31,9 @@ auth, then fill `web/.env.production` from `web/.env.example`.
 
 **Frontend (`web/`) → Firebase Hosting**
 
-- `web/.env.production`: `lie-hard-live` `NEXT_PUBLIC_FIREBASE_*` + `NEXT_PUBLIC_WS_URL=wss://<railway-url>`
-  - `NEXT_PUBLIC_WS_HTTP_URL=https://<railway-url>`.
+- `web/.env.production`: `lie-hard-live` `NEXT_PUBLIC_FIREBASE_*` + `NEXT_PUBLIC_WS_URL=wss://lie-hard-api.playpause.studio`
+  - `NEXT_PUBLIC_WS_HTTP_URL=https://lie-hard-api.playpause.studio`. That domain is a Cloudflare-proxied
+  CNAME to the Railway server (Jio blocks `*.up.railway.app`).
 - From `web/`: `npm run deploy:prod` (builds with `.env.production` and deploys hosting + Firestore rules).
 
 ## Local dev
@@ -41,16 +41,10 @@ auth, then fill `web/.env.production` from `web/.env.example`.
 - Backend: `cd server && cp .env.example .env` (set `OPERATOR_PASSWORD`), `npm install`, `npm run dev` (:8080). `npm run smoke` runs the 12 security checks.
 - Frontend: `cd web`, add `.env.local` with Firebase config + `NEXT_PUBLIC_WS_URL=http://localhost:8080`, `npm install`, `npm run dev` (:3000). Open `/operator`, `/display`, `/audience`.
 
-## Show-day fallback (if the server/Railway fails)
+## Show-day health
 
-There are **two independent deployments** on **two Firebase projects + two URLs**:
-
-|             | Repo                   | Firebase project | Needs server?         |
-| ----------- | ---------------------- | ---------------- | --------------------- |
-| **Primary** | `lie-hard-live` (this) | `lie-hard-live`  | Yes (Railway)         |
-| **Backup**  | `lie-hard`             | `lie-hard`       | No (direct Firestore) |
-
-If the server goes down mid-show: **open the backup URL** on the operator, display,
-and audience devices. The operator re-runs setup (upload CSVs, set current scores —
-data does not carry across projects) and continues; voting/reveal/scoring work
-identically. **Before the show, dry-run the backup URL with the server stopped.**
+The operator panel's header has a **status strip** (polls `op:status` every 2 s): server
+link + round-trip time, big screen connected, phones online / voted, votes in the open
+round, server load (worst event-loop stall in the last 10 s) and the Redis backup.
+If the server restarts, Redis restores the game; refresh open pages if they don't
+reconnect on their own.

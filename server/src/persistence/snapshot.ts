@@ -5,6 +5,8 @@ import type { Snapshot } from '../game/store';
 
 const KEY = 'lie-hard:snapshot';
 
+export type SnapshotStatus = 'disabled' | 'connected' | 'connecting' | 'down';
+
 /**
  * Crash-recovery snapshot store. When REDIS_URL is set, the full game state is
  * periodically saved to Redis and restored on boot, so restarting the Railway
@@ -13,6 +15,8 @@ const KEY = 'lie-hard:snapshot';
  */
 export class SnapshotStore {
   private redis: Redis | null = null;
+  /** When the last snapshot reached Redis (ms), or null. */
+  lastSavedAt: number | null = null;
 
   constructor() {
     if (env.REDIS_URL) {
@@ -31,10 +35,20 @@ export class SnapshotStore {
     return this.redis !== null;
   }
 
+  /** Redis link health, for the operator's status strip. */
+  get status(): SnapshotStatus {
+    if (!this.redis) return 'disabled';
+    if (this.redis.status === 'ready') return 'connected';
+    if (this.redis.status === 'connecting' || this.redis.status === 'connect' || this.redis.status === 'reconnecting')
+      return 'connecting';
+    return 'down';
+  }
+
   async save(snap: Snapshot): Promise<void> {
     if (!this.redis) return;
     try {
       await this.redis.set(KEY, JSON.stringify(snap));
+      this.lastSavedAt = Date.now();
     } catch (e) {
       logger.warn({ err: e instanceof Error ? e.message : e }, 'Snapshot save failed');
     }

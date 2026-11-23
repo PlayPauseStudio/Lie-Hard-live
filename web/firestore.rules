@@ -2,26 +2,23 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // SHARED PROJECT (server + no-server backup use this one project).
-    //
-    // The server mirrors its authoritative game state to gameState/live via the
-    // Admin SDK (which bypasses these rules). The no-server BACKUP app reads and
-    // writes gameState/live directly, so it must be open. This is a deliberate,
-    // temporary trade for instant switch-over with full carryover — re-lock to
-    // `if false` once the backup is retired and only the server version remains.
+    // Game state lives on the server (in memory + Redis), never in Firestore.
+    // Locked so the old gameState/live doc (left by the retired no-server
+    // backup) can't be read or written from a browser.
     match /gameState/{document} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
 
-    // Failover control flag (control/mode.backupMode). Kept OFF gameState/live so
-    // the server's mirror (a full overwrite) can't wipe it. Open like gameState so
-    // either operator can flip it and every audience phone can read it.
+    // control/config.audienceFormUrl: the optional registration-screen form,
+    // read by audience phones before they join the game. Edited from the
+    // Firebase console only (the console bypasses these rules).
     match /control/{document} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if false;
     }
 
     // Voter registrations: each signed-in user can read/write ONLY their own doc.
-    // (Server writes via Admin SDK; backup audience writes its own doc directly.)
+    // (The server writes via the Admin SDK.)
     // No public read/delete — keeps attendee name + phone private.
     match /voters/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;

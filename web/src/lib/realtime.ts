@@ -40,6 +40,7 @@ export const OP = {
   TIMER_RESET: 'op:timerReset',
   RESET_GAME: 'op:resetGame',
   DELETE_USER_DATA: 'op:deleteUserData',
+  STATUS: 'op:status',
 } as const;
 
 export const AUD = {
@@ -59,6 +60,7 @@ export interface Ack {
   choice?: string;
   votingRound?: string | null;
   registered?: boolean;
+  status?: unknown;
 }
 
 export type TokenProvider = () => Promise<string | null> | string | null;

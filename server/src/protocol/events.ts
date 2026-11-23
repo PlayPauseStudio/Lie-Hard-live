@@ -31,6 +31,8 @@ export const OP = {
   TIMER_RESET: 'op:timerReset',
   RESET_GAME: 'op:resetGame',
   DELETE_USER_DATA: 'op:deleteUserData',
+  /** Read-only: live numbers for the operator's status strip. */
+  STATUS: 'op:status',
 } as const;
 
 // audience → server (require audience role / Firebase uid)
@@ -54,4 +56,6 @@ export interface Ack {
   votingRound?: string | null;
   /** For aud:register — echo the stored record. */
   registered?: boolean;
+  /** op:status — live server numbers. */
+  status?: unknown;
 }

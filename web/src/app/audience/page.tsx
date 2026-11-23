@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   doc,
   onSnapshot,
-  updateDoc,
   disableNetwork,
   enableNetwork,
 } from "firebase/firestore";
@@ -163,17 +162,6 @@ export default function AudiencePage() {
   const [regError, setRegError] = useState("");
   const [registering, setRegistering] = useState(false);
 
-  // Failover: control/mode.backupMode. Normally we use the secure WebSocket; on
-  // backup mode we read state from and vote to Firestore directly — staying on
-  // this same URL so the audience never has to sign in again.
-  const [backupMode, setBackupMode] = useState(false);
-  useEffect(() => {
-    const unsub = onSnapshot(doc(db, "control", "mode"), (snap) => {
-      setBackupMode(snap.exists() ? Boolean(snap.data()?.backupMode) : false);
-    });
-    return () => unsub();
-  }, []);
-
   // Optional creative-team form. URL lives in control/config.audienceFormUrl.
   // When set, the registration screen requires tapping it open once before
   // Register unlocks — a soft gate (no submission tracking). Empty/unset means
@@ -207,12 +195,10 @@ export default function AudiencePage() {
     }
   }, [audienceFormUrl]);
 
-  // Browser online status drives the "Reconnecting…" banner in backup mode.
   // Phones freeze background tabs; on wake, Firestore's socket can stay wedged
-  // (matters in backup mode + for the voters/config listeners). `online` only
-  // fires on network changes, so we also toggle the network on `visibilitychange`
-  // to force a resync.
-  const [online, setOnline] = useState(true);
+  // (matters for the voters/config listeners). `online` only fires on network
+  // changes, so we also toggle the network on `visibilitychange` to force a
+  // resync.
   useEffect(() => {
     let reconnecting = false;
     const reconnect = async () => {
@@ -227,24 +213,14 @@ export default function AudiencePage() {
         reconnecting = false;
       }
     };
-    const on = () => {
-      setOnline(true);
-      void reconnect();
-    };
-    const off = () => setOnline(false);
+    const on = () => void reconnect();
     const onVisible = () => {
-      if (document.visibilityState === "visible") {
-        if (typeof navigator !== "undefined") setOnline(navigator.onLine);
-        void reconnect();
-      }
+      if (document.visibilityState === "visible") void reconnect();
     };
-    if (typeof navigator !== "undefined") setOnline(navigator.onLine);
     window.addEventListener("online", on);
-    window.addEventListener("offline", off);
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       window.removeEventListener("online", on);
-      window.removeEventListener("offline", off);
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
@@ -255,27 +231,10 @@ export default function AudiencePage() {
       auth.currentUser ? auth.currentUser.getIdToken() : Promise.resolve(null),
     [],
   );
-  const {
-    gameState: socketState,
-    emit,
-    connected: socketConnected,
-  } = useGameState<GameState>("audience", {
+  const { gameState, emit, connected } = useGameState<GameState>("audience", {
     getToken,
-    enabled: !!user && !backupMode,
+    enabled: !!user,
   });
-
-  // Firestore game state — used only in backup mode (server paused/down).
-  const [firestoreState, setFirestoreState] = useState<GameState | null>(null);
-  useEffect(() => {
-    if (!backupMode) return;
-    const unsub = onSnapshot(doc(db, "gameState", "live"), (snap) => {
-      if (snap.exists()) setFirestoreState(snap.data() as GameState);
-    });
-    return () => unsub();
-  }, [backupMode]);
-
-  const gameState = backupMode ? firestoreState : socketState;
-  const connected = backupMode ? online : socketConnected;
 
   const [myVote, setMyVote] = useState<{
     choice: string;
@@ -459,23 +418,6 @@ export default function AudiencePage() {
     setSubmitting(true);
     setVoteError("");
     try {
-      if (backupMode) {
-        // Failover: vote straight to Firestore, exactly like the backup audience.
-        const votingRound = getCurrentVotingRound(gameState);
-        if (!votingRound) {
-          setVoteError("Voting is not open right now.");
-          return;
-        }
-        await updateDoc(doc(db, "gameState", "live"), {
-          [`audienceVotes.${user.uid}`]: {
-            choice,
-            votingRound,
-            displayName: voterDoc.name,
-          },
-        });
-        setMyVote({ choice, votingRound });
-        return;
-      }
       // The server derives the round, validates it's open, and dedupes per uid.
       const ack = await emit(AUD.VOTE, { choice });
       if (ack.ok && ack.votingRound) {

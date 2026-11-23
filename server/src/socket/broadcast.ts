@@ -1,7 +1,6 @@
 import type { RoomStore } from '../game/store';
 import type { Patch } from '../game/reducers';
 import { audienceView } from '../game/redact';
-import type { GameMirror } from '../persistence/gameMirror';
 import { SRV } from '../protocol/events';
 import { type AppServer, type AppSocket, ROOM_FULL, ROOM_AUDIENCE } from './types';
 
@@ -23,7 +22,6 @@ export class Broadcaster {
   constructor(
     private readonly io: AppServer,
     private readonly store: RoomStore,
-    private readonly mirror?: GameMirror,
   ) {}
 
   /** Start the throttled vote-tally flusher (operator/display bars). */
@@ -55,7 +53,6 @@ export class Broadcaster {
     this.io
       .to(ROOM_AUDIENCE)
       .emit(SRV.STATE_FULL, { version, state: audienceView(this.store.getState()) });
-    this.mirror?.write(this.store.getState());
   }
 
   /** Broadcast a full replacement (start show / reset) to everyone. */
@@ -64,7 +61,6 @@ export class Broadcaster {
     const state = this.store.getState();
     this.io.to(ROOM_FULL).emit(SRV.STATE_FULL, { version, state });
     this.io.to(ROOM_AUDIENCE).emit(SRV.STATE_FULL, { version, state: audienceView(state) });
-    this.mirror?.write(state);
   }
 
   /** Mark votes changed; the flusher emits an audienceVotes patch to ROOM_FULL. */
@@ -79,6 +75,5 @@ export class Broadcaster {
       version: this.store.version,
       changed: { audienceVotes: this.store.getState().audienceVotes },
     });
-    this.mirror?.write(this.store.getState());
   }
 }

@@ -7,14 +7,26 @@ import type { AppSocket } from '../types';
 import { logger } from '../../util/logger';
 import { OP, type Ack } from '../../protocol/events';
 import { clearAllVoters } from '../../persistence/voters';
+import { getCurrentVotingRound } from '../../game/voting';
+import { worstStallMs } from '../../util/loadMonitor';
 import * as R from '../../game/reducers';
 import * as S from '../../validation/schemas';
 
 const empty = z.object({}).default({});
 
+export interface ServerInfo {
+  /** Sockets currently connected per role. */
+  online(): { operators: number; displays: number; phones: number };
+  /** Redis snapshot status. */
+  snapshots(): string;
+  /** When the last snapshot reached Redis (ms), or null. */
+  lastSavedAt(): number | null;
+}
+
 export interface HandlerCtx {
   store: RoomStore;
   broadcaster: Broadcaster;
+  info: ServerInfo;
 }
 
 export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): void {
@@ -27,7 +39,11 @@ export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): vo
   };
 
   /** Register an operator event: role guard + zod validation + ack + errors. */
-  function on<T>(event: string, schema: ZodSchema<T>, body: (data: T) => void | Promise<void>): void {
+  function on<T>(
+    event: string,
+    schema: ZodSchema<T>,
+    body: (data: T) => void | Partial<Ack> | Promise<void>,
+  ): void {
     socket.on(event, async (payload: unknown, ack?: (a: Ack) => void) => {
       const cb = typeof ack === 'function' ? ack : () => {};
       if (socket.data.role !== 'operator') {
@@ -40,8 +56,8 @@ export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): vo
         return;
       }
       try {
-        await body(parsed.data);
-        cb({ ok: true });
+        const extra = await body(parsed.data);
+        cb({ ok: true, ...(extra ?? {}) });
       } catch (e) {
         logger.error({ event, err: e instanceof Error ? e.message : e }, 'Operator handler error');
         cb({ ok: false, error: 'server_error' });
@@ -126,6 +142,27 @@ export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): vo
   on(OP.RESET_GAME, empty, () => {
     store.replace(initialGameState());
     broadcaster.broadcastFull();
+  });
+
+  // ── Status strip (read-only, polled every few seconds) ─────────────────────
+  on(OP.STATUS, empty, () => {
+    const s = store.getState();
+    const round = getCurrentVotingRound(s);
+    const saved = ctx.info.lastSavedAt();
+    return {
+      status: {
+        serverTime: Date.now(),
+        online: ctx.info.online(),
+        votingRound: round,
+        votesNow: round ? Object.values(s.audienceVotes).filter((v) => v.votingRound === round).length : 0,
+        voters: Object.keys(s.audienceVotes).length,
+        worstStallMs: worstStallMs(),
+        memoryMb: Math.round(process.memoryUsage().rss / 1048576),
+        snapshots: ctx.info.snapshots(),
+        savedAgoMs: saved ? Date.now() - saved : null,
+        uptimeS: Math.round(process.uptime()),
+      },
+    };
   });
 
   on(OP.DELETE_USER_DATA, empty, async () => {

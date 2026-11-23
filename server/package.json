@@ -13,8 +13,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "smoke": "tsx scripts/smoke.ts",
-    "seed:live": "tsx scripts/seed-live-game.ts"
+    "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

@@ -5,8 +5,7 @@ import Papa from "papaparse";
 import { useControlAccess } from "@/contexts/ControlAccessContext";
 import { useGameState } from "@/lib/useGameState";
 import { OP } from "@/lib/realtime";
-import { doc, onSnapshot, setDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import StatusStrip from "@/components/operator/StatusStrip";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -320,7 +319,7 @@ export default function OperatorPage() {
   };
 
   // Authoritative game state over WebSocket (operator role; JWT-gated).
-  const { gameState, emit } = useGameState<GameState>("operator", {
+  const { gameState, emit, connected } = useGameState<GameState>("operator", {
     getToken,
     enabled: isAuthenticated,
   });
@@ -381,23 +380,6 @@ export default function OperatorPage() {
   useEffect(() => {
     setOrigin(window.location.origin);
   }, []);
-
-  // Failover: control/mode.backupMode (shared with the backup app). When true the
-  // backup operator owns the show and the audience votes over Firestore.
-  const [backupMode, setBackupMode] = useState(false);
-  useEffect(() => {
-    const unsub = onSnapshot(doc(db, "control", "mode"), (snap) => {
-      setBackupMode(snap.exists() ? Boolean(snap.data()?.backupMode) : false);
-    });
-    return () => unsub();
-  }, []);
-  const setAudienceBackupMode = (backup: boolean) => {
-    void setDoc(
-      doc(db, "control", "mode"),
-      { backupMode: backup },
-      { merge: true },
-    );
-  };
 
   // Audience link button: any URL (form / video / …) the operator can push to the
   // audience phones, with a live SHOW/HIDE toggle. Stored in control/config so no
@@ -3171,35 +3153,6 @@ export default function OperatorPage() {
       className="min-h-screen"
       style={{ backgroundColor: "#09090b", color: "#fafafa" }}
     >
-      {/* Failover banner — the backup operator is now driving the show */}
-      {backupMode && (
-        <div
-          className="w-full flex items-center justify-center gap-4 px-4 py-2 text-center flex-wrap"
-          style={{
-            backgroundColor: "#450a0a",
-            borderBottom: "1px solid #7f1d1d",
-          }}
-        >
-          <span
-            className="font-mono text-sm font-bold"
-            style={{ color: "#fca5a5" }}
-          >
-            ⚠ BACKUP IN CONTROL — the show is running from the backup operator.
-            Don&apos;t operate here.
-          </span>
-          <button
-            onClick={() => setAudienceBackupMode(false)}
-            className="font-mono text-xs font-bold px-3 py-1 rounded"
-            style={{
-              backgroundColor: "#1a1a1a",
-              color: "#f59e0b",
-              border: "1px solid #78350f",
-            }}
-          >
-            TAKE BACK CONTROL
-          </button>
-        </div>
-      )}
       {/* Sticky header */}
       <div
         className="sticky top-0 z-20"
@@ -3223,26 +3176,6 @@ export default function OperatorPage() {
               >
                 OPERATOR PANEL
               </p>
-              {!backupMode && (
-                <button
-                  onClick={() => {
-                    if (
-                      confirm(
-                        "Hand control to the BACKUP operator? The server will stop mirroring and the audience will vote via the backup. Use this if the server is failing.",
-                      )
-                    )
-                      setAudienceBackupMode(true);
-                  }}
-                  className="mt-2 font-mono text-[11px] font-bold px-2 py-1 rounded"
-                  style={{
-                    backgroundColor: "#1a1a1a",
-                    color: "#a1a1aa",
-                    border: "1px solid #3f3f46",
-                  }}
-                >
-                  ⇄ Hand to backup
-                </button>
-              )}
               {/* Jump to any phase at will (show must be started so segment data is loaded). */}
               {gameState.phase !== "SETUP" && (
                 <select
@@ -3384,6 +3317,9 @@ export default function OperatorPage() {
                 </div>
               ))}
             </div>
+          </div>
+          <div className="mt-3">
+            <StatusStrip connected={connected} emit={emit} />
           </div>
         </div>
       </div>
