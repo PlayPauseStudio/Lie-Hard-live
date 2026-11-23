@@ -26,7 +26,14 @@ async function main(): Promise<void> {
   });
 
   // Periodic snapshot of authoritative state.
-  const snapTimer = setInterval(() => void snapshots.save(store.snapshot()), env.SNAPSHOT_INTERVAL_MS);
+  // Skips the save when nothing changed (the state holds base64 photos, so a
+  // needless stringify + Redis write every few seconds isn't free).
+  let savedVersion = store.version;
+  const snapTimer = setInterval(() => {
+    if (store.version === savedVersion) return;
+    savedVersion = store.version;
+    void snapshots.save(store.snapshot());
+  }, env.SNAPSHOT_INTERVAL_MS);
   snapTimer.unref?.();
 
   httpServer.listen(env.PORT, '0.0.0.0', () => {

@@ -2,12 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import {
-  doc,
-  onSnapshot,
-  disableNetwork,
-  enableNetwork,
-} from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore/lite";
 import {
   GoogleAuthProvider,
   onAuthStateChanged,
@@ -29,7 +24,6 @@ interface Player {
   id: number;
   name: string;
   score: number;
-  photo: string;
 }
 interface WarmupStatement {
   statement: string;
@@ -173,11 +167,14 @@ export default function AudiencePage() {
   const [audienceFormUrl, setAudienceFormUrl] = useState("");
   const [formOpened, setFormOpened] = useState(false);
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "control", "config"), (snap) => {
-      const d = snap.exists() ? snap.data() : {};
-      setAudienceFormUrl(String(d?.audienceFormUrl ?? ""));
-    });
-    return () => unsub();
+    getDoc(doc(db, "control", "config"))
+      .then((snap) => {
+        const d = snap.exists() ? snap.data() : {};
+        setAudienceFormUrl(String(d?.audienceFormUrl ?? ""));
+      })
+      .catch(() => {
+        /* no form gate if it can't be read */
+      });
   }, []);
 
   // Restore the "form opened" gate after a background-tab reload (mobile), so a
@@ -194,36 +191,6 @@ export default function AudiencePage() {
       /* storage unavailable — fine */
     }
   }, [audienceFormUrl]);
-
-  // Phones freeze background tabs; on wake, Firestore's socket can stay wedged
-  // (matters for the voters/config listeners). `online` only fires on network
-  // changes, so we also toggle the network on `visibilitychange` to force a
-  // resync.
-  useEffect(() => {
-    let reconnecting = false;
-    const reconnect = async () => {
-      if (reconnecting) return;
-      reconnecting = true;
-      try {
-        await disableNetwork(db);
-        await enableNetwork(db);
-      } catch {
-        /* best-effort resync */
-      } finally {
-        reconnecting = false;
-      }
-    };
-    const on = () => void reconnect();
-    const onVisible = () => {
-      if (document.visibilityState === "visible") void reconnect();
-    };
-    window.addEventListener("online", on);
-    document.addEventListener("visibilitychange", onVisible);
-    return () => {
-      window.removeEventListener("online", on);
-      document.removeEventListener("visibilitychange", onVisible);
-    };
-  }, []);
 
   // Game / voting — authoritative state over WebSocket (audience role).
   const getToken = useCallback(
@@ -265,16 +232,35 @@ export default function AudiencePage() {
     });
   }, []);
 
-  // ── Voter doc lookup (real-time — detects remote deletion) ──────────────
+  // ── Voter doc lookup ─────────────────────────────────────────────────────
+  // Read on sign-in and again on every socket (re)connect, so a phone that was
+  // asleep through the operator's "Delete user data" re-registers on wake.
+  // Retries while the read fails, so a flaky first load can't hang on loading.
 
   useEffect(() => {
     if (!user) return;
     setVoterDoc(null); // loading
-    const unsub = onSnapshot(doc(db, "voters", user.uid), (snap) => {
-      setVoterDoc(snap.exists() ? (snap.data() as VoterDoc) : false);
-    });
-    return () => unsub();
   }, [user]);
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const load = () => {
+      getDoc(doc(db, "voters", user.uid))
+        .then((snap) => {
+          if (alive)
+            setVoterDoc(snap.exists() ? (snap.data() as VoterDoc) : false);
+        })
+        .catch(() => {
+          if (alive) retry = setTimeout(load, 2000);
+        });
+    };
+    load();
+    return () => {
+      alive = false;
+      clearTimeout(retry);
+    };
+  }, [user, connected]);
 
   // ── Reset showChange on new voting round ─────────────────────────────────
 
@@ -385,8 +371,8 @@ export default function AudiencePage() {
     setRegistering(true);
     try {
       // Registration is written server-side (Firebase Admin), keyed by the
-      // server-verified uid. The voters/{uid} onSnapshot below will also pick
-      // it up, but we update optimistically for a snappy transition.
+      // server-verified uid. Update locally for a snappy transition (the next
+      // voters/{uid} read will agree).
       const ack = await emit(AUD.REGISTER, {
         name: name.trim(),
         phone: phone.trim(),

@@ -13,6 +13,30 @@ interface PatchMsg<T> {
   version: number;
   changed: Partial<T>;
 }
+interface VotesMsg {
+  version: number;
+  votes: Record<string, unknown>;
+}
+
+type WithPlayers = { players?: { id: number; photo?: string }[] };
+type WithVotes = { audienceVotes?: Record<string, unknown> };
+
+/**
+ * Shallow-merge a patch. The server leaves player photos out of patches (they
+ * only change at Start Show, which sends a full state), so carry them over.
+ */
+function mergePatch<T>(prev: T, changed: Partial<T>): T {
+  const next = { ...prev, ...changed };
+  const incoming = (changed as WithPlayers).players;
+  const before = (prev as WithPlayers).players;
+  if (incoming && before) {
+    const photos = new Map(before.map((p) => [p.id, p.photo]));
+    (next as WithPlayers).players = incoming.map((p) =>
+      p.photo === undefined ? { ...p, photo: photos.get(p.id) ?? '' } : p,
+    );
+  }
+  return next;
+}
 
 export interface UseGameStateOptions {
   /** Returns a fresh auth token on each (re)connect (Firebase ID token / operator JWT). */
@@ -54,7 +78,15 @@ export function useGameState<T>(role: Role, opts: UseGameStateOptions = {}): Use
     socket.on('disconnect', () => setConnected(false));
     socket.on(SRV.STATE_FULL, (msg: StateMsg<T>) => setGameState(msg.state));
     socket.on(SRV.STATE_PATCH, (msg: PatchMsg<T>) =>
-      setGameState((prev) => (prev ? { ...prev, ...msg.changed } : prev)),
+      setGameState((prev) => (prev ? mergePatch(prev, msg.changed) : prev)),
+    );
+    // Operator/display only: votes cast since the last flush, not the whole map.
+    socket.on(SRV.VOTES_DELTA, (msg: VotesMsg) =>
+      setGameState((prev) =>
+        prev
+          ? { ...prev, audienceVotes: { ...(prev as WithVotes).audienceVotes, ...msg.votes } }
+          : prev,
+      ),
     );
 
     // Phones drop the socket when the screen locks / the tab is backgrounded.

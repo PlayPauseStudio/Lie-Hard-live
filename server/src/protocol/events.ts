@@ -45,6 +45,8 @@ export const AUD = {
 export const SRV = {
   STATE_FULL: 'state:full',
   STATE_PATCH: 'state:patch',
+  /** New audience votes since the last flush (operator + display only). */
+  VOTES_DELTA: 'votes:delta',
   ERROR: 'error',
 } as const;
 

@@ -43,9 +43,13 @@ export class RoomStore {
     return ++this._version;
   }
 
-  /** Record (or overwrite) a single audience vote. Idempotent per uid+round. */
+  /**
+   * Record (or overwrite) a single audience vote. Idempotent per uid+round.
+   * Mutates the vote map in place: copying it per vote made a burst of N votes
+   * cost O(N²). Nothing holds an older reference expecting it unchanged.
+   */
   recordVote(uid: string, vote: AudienceVote): number {
-    this.state = { ...this.state, audienceVotes: { ...this.state.audienceVotes, [uid]: vote } };
+    this.state.audienceVotes[uid] = vote;
     return ++this._version;
   }
 

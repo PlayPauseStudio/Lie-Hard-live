@@ -11,7 +11,8 @@ export type Role = 'operator' | 'display' | 'audience';
  */
 export interface AudienceGameState {
   phase: GameState['phase'];
-  players: { id: number; name: string; photo: string; score: number }[];
+  // No photos: the phones never show them, and they're tens of KB each.
+  players: { id: number; name: string; score: number }[];
   // Operator-pushed link button (rides the socket so it's as reliable as votes).
   showAudienceLink: boolean;
   audienceLink: string;
@@ -46,7 +47,7 @@ export interface AudienceGameState {
 export function audienceView(gs: GameState): AudienceGameState {
   return {
     phase: gs.phase,
-    players: gs.players.map((p) => ({ id: p.id, name: p.name, photo: p.photo, score: p.score })),
+    players: gs.players.map((p) => ({ id: p.id, name: p.name, score: p.score })),
     showAudienceLink: gs.showAudienceLink ?? false,
     audienceLink: gs.audienceLink ?? '',
     audienceLinkLabel: gs.audienceLinkLabel ?? '',

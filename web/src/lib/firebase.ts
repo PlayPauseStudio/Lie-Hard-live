@@ -1,7 +1,8 @@
 // src/lib/firebase.ts
 
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+// Lite SDK: phones only do one-off reads (no listeners), at a fraction of the size.
+import { getFirestore } from "firebase/firestore/lite";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {

@@ -51,6 +51,7 @@ export const AUD = {
 export const SRV = {
   STATE_FULL: 'state:full',
   STATE_PATCH: 'state:patch',
+  VOTES_DELTA: 'votes:delta',
   ERROR: 'error',
 } as const;
 

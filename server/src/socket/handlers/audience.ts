@@ -80,9 +80,9 @@ export function registerAudienceHandlers(
       displayName: socket.data.name,
       ts: Date.now(),
     });
-    broadcaster.markVotesDirty();
+    broadcaster.markVote(uid);
     cb({ ok: true, choice: parsed.data.choice, votingRound: round });
-    logger.info({ uid, round, choice: parsed.data.choice }, 'aud:vote recorded');
+    logger.debug({ uid, round, choice: parsed.data.choice }, 'aud:vote recorded');
 
     // Backfill the display name for returning voters in the background.
     if (!socket.data.name) {
