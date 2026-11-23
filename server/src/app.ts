@@ -9,7 +9,7 @@ import { operatorLoginRouter } from './http/operatorLogin';
  * Build the Express app (HTTP layer). Socket.IO attaches to the same underlying
  * http.Server in index.ts; this only handles plain HTTP routes.
  */
-export function buildApp(getVersion: () => number): Express {
+export function buildApp(getVersion: () => number, getBackup: () => Record<string, unknown>): Express {
   const app = express();
 
   app.set('trust proxy', 1); // behind Railway's proxy
@@ -29,7 +29,7 @@ export function buildApp(getVersion: () => number): Express {
 
   app.use(express.json({ limit: '1mb' }));
 
-  app.use(healthRouter(getVersion));
+  app.use(healthRouter(getVersion, getBackup));
   app.use(operatorLoginRouter());
 
   return app;

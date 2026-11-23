@@ -18,7 +18,10 @@ async function main(): Promise<void> {
   const restored = await snapshots.load();
   if (restored) store.restore(restored);
 
-  const app = buildApp(() => store.version);
+  const app = buildApp(() => store.version, () => ({
+    snapshots: snapshots.status,
+    savedAgoS: snapshots.lastSavedAt ? Math.round((Date.now() - snapshots.lastSavedAt) / 1000) : null,
+  }));
   const httpServer = createServer(app);
   const { broadcaster } = createIo(httpServer, store, {
     snapshots: () => snapshots.status,
@@ -28,11 +31,21 @@ async function main(): Promise<void> {
   // Periodic snapshot of authoritative state.
   // Skips the save when nothing changed (the state holds base64 photos, so a
   // needless stringify + Redis write every few seconds isn't free).
+  // A failed save isn't marked done, so the next tick tries again.
   let savedVersion = store.version;
+  let saving = false;
   const snapTimer = setInterval(() => {
-    if (store.version === savedVersion) return;
-    savedVersion = store.version;
-    void snapshots.save(store.snapshot());
+    if (saving || store.version === savedVersion) return;
+    const version = store.version;
+    saving = true;
+    void snapshots
+      .save(store.snapshot())
+      .then((ok) => {
+        if (ok) savedVersion = version;
+      })
+      .finally(() => {
+        saving = false;
+      });
   }, env.SNAPSHOT_INTERVAL_MS);
   snapTimer.unref?.();
 

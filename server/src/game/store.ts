@@ -1,5 +1,6 @@
 import type { GameState, AudienceVote } from './state';
 import { initialGameState } from './state';
+import { recordVoteHistory } from './history';
 import type { Patch } from './reducers';
 
 export interface Snapshot {
@@ -50,6 +51,7 @@ export class RoomStore {
    */
   recordVote(uid: string, vote: AudienceVote): number {
     this.state.audienceVotes[uid] = vote;
+    recordVoteHistory(this.state, uid, vote.votingRound, vote.choice, vote.displayName, vote.ts);
     return ++this._version;
   }
 
@@ -58,7 +60,15 @@ export class RoomStore {
   }
 
   restore(snap: Snapshot): void {
-    this.state = snap.state;
+    // Snapshots from before episodes existed: 0 signs nobody out.
+    this.state = {
+      ...snap.state,
+      episodeStartedAt: snap.state.episodeStartedAt ?? 0,
+      // Snapshots from before the export history existed.
+      voteHistory: snap.state.voteHistory ?? {},
+      scoreLog: snap.state.scoreLog ?? [],
+      roundLog: snap.state.roundLog ?? [],
+    };
     this._version = snap.version;
   }
 }

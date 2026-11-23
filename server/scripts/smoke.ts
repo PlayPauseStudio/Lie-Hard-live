@@ -137,6 +137,59 @@ async function main(): Promise<void> {
   const scores = changed?.voterScores ?? {};
   check('reveal credits only the correct voter', scores['uid-alice']?.correctCount === 1 && !scores['uid-bob']);
 
+  // ── Excel export data ──────────────────────────────────────────────────────
+  await emit(operator, 'op:adjustScore', { playerId: 2, delta: 15 });
+  const exp = (await emit(operator, 'op:exportData', {})) as any;
+  const ex = exp.export ?? {};
+  check('export returns the show history', exp.ok && typeof ex.exportedAt === 'number');
+  check(
+    'export keeps every vote per round (alice changed to LIE)',
+    ex.voteHistory?.['uid-alice']?.votes?.['warmup-0']?.choice === 'LIE' &&
+      ex.voteHistory?.['uid-bob']?.votes?.['warmup-0']?.choice === 'TRUTH',
+  );
+  check(
+    'export logs the manual score change',
+    ex.scoreLog?.some((e: any) => e.player === 'P2' && e.delta === 15 && e.event === 'Manual score change'),
+  );
+  check('export lists voter sign-ups (array)', Array.isArray(ex.voters));
+  const opFull = await new Promise<any>((resolve) => {
+    const s = io(URL, { auth: { role: 'operator', token }, transports: ['websocket'], forceNew: true });
+    s.once('state:full', (m: any) => { s.close(); resolve(m.state); });
+  });
+  check('screens never receive the export history', opFull && !('voteHistory' in opFull) && !('scoreLog' in opFull));
+
+  // ── Soft refresh / full reset (new episode, phones sign out) ───────────────
+  const before = Date.now();
+  await new Promise((r) => setTimeout(r, 5));
+  const softOp = nextState(operator);
+  const softPhone = nextState(alice);
+  const softAck = await emit(operator, 'op:softRefresh', {});
+  const soft = await softOp;
+  const softAud = await softPhone;
+  check('soft refresh acks ok', softAck.ok);
+  check(
+    'soft refresh replays from warm-up with the same players and statements',
+    soft?.phase === 'WARMUP' &&
+      soft.players?.map((p: any) => p.name).join() === 'P1,P2,P3' &&
+      soft.warmup?.statements?.length === 1 &&
+      soft.segment1?.statements?.length === 3,
+  );
+  check(
+    'soft refresh clears scores, votes and voter scores',
+    soft?.players?.every((p: any) => p.score === 0) &&
+      Object.keys(soft.audienceVotes ?? {}).length === 0 &&
+      Object.keys(soft.voterScores ?? {}).length === 0,
+  );
+  check('soft refresh starts a new episode on phones', softAud?.episodeStartedAt > before);
+
+  const fullOp = nextState(operator);
+  const fullAck = await emit(operator, 'op:resetGame', {});
+  const full = await fullOp;
+  check('full reset goes back to setup', fullAck.ok && full?.phase === 'SETUP' && full.warmup?.statements?.length === 0);
+  check('full reset starts a newer episode', full?.episodeStartedAt >= softAud?.episodeStartedAt);
+  const gone = await emit(operator, 'op:deleteUserData', {});
+  check('delete-user-data event no longer exists', !gone.ok);
+
   // eslint-disable-next-line no-console
   console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : `${failures} CHECK(S) FAILED`}`);
 

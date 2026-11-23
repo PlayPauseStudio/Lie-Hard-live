@@ -1,18 +1,22 @@
 import type { ZodSchema } from 'zod';
 import { z } from 'zod';
 import type { RoomStore } from '../../game/store';
-import { initialGameState } from '../../game/state';
+import { initialGameState, type GameState } from '../../game/state';
 import type { Broadcaster } from '../broadcast';
 import type { AppSocket } from '../types';
 import { logger } from '../../util/logger';
 import { OP, type Ack } from '../../protocol/events';
-import { clearAllVoters } from '../../persistence/voters';
+import { clearAllVoters, listVoters } from '../../persistence/voters';
+import { logScoreChanges, logSegment3Round, logSegmentRound } from '../../game/history';
 import { getCurrentVotingRound } from '../../game/voting';
 import { worstStallMs } from '../../util/loadMonitor';
 import * as R from '../../game/reducers';
 import * as S from '../../validation/schemas';
 
 const empty = z.object({}).default({});
+
+/** Events that replace the whole show (and its score log). */
+const FRESH_START = new Set<string>([OP.START_SHOW, OP.RESET_GAME, OP.SOFT_REFRESH]);
 
 export interface ServerInfo {
   /** Sockets currently connected per role. */
@@ -42,7 +46,7 @@ export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): vo
   function on<T>(
     event: string,
     schema: ZodSchema<T>,
-    body: (data: T) => void | Partial<Ack> | Promise<void>,
+    body: (data: T) => void | Partial<Ack> | Promise<void | Partial<Ack>>,
   ): void {
     socket.on(event, async (payload: unknown, ack?: (a: Ack) => void) => {
       const cb = typeof ack === 'function' ? ack : () => {};
@@ -56,7 +60,13 @@ export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): vo
         return;
       }
       try {
+        const before = store.getState();
         const extra = await body(parsed.data);
+        // Any score that moved goes in the export's score log, whatever caused it.
+        const after = store.getState();
+        // (Not for a new show or a reset: those start a fresh log.)
+        if (after !== before && after.players !== before.players && !FRESH_START.has(event))
+          logScoreChanges(before, after, event);
         cb({ ok: true, ...(extra ?? {}) });
       } catch (e) {
         logger.error({ event, err: e instanceof Error ? e.message : e }, 'Operator handler error');
@@ -113,10 +123,15 @@ export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): vo
     apply(R.toggleSeg3Statement(store.getState(), d.playerId)),
   );
 
-  on(OP.AWARD_SEGMENT, S.awardSegmentSchema, (d) => apply(R.awardSegment(store.getState(), d.segment)));
+  on(OP.AWARD_SEGMENT, S.awardSegmentSchema, (d) => {
+    logSegmentRound(store.getState(), d.segment);
+    apply(R.awardSegment(store.getState(), d.segment));
+  });
 
-  on(OP.AWARD_SEGMENT3, S.awardSegment3Schema, (d) =>
-    apply(R.awardSegment3(store.getState(), d.winnerId)),
+  on(OP.AWARD_SEGMENT3, S.awardSegment3Schema, (d) => {
+    logSegment3Round(store.getState(), d.winnerId);
+    apply(R.awardSegment3(store.getState(), d.winnerId));
+  }
   );
 
   on(OP.SET_SEGMENT_POINTS, S.setSegmentPointsSchema, (d) =>
@@ -139,9 +154,49 @@ export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): vo
   on(OP.TIMER_STOP, empty, () => apply(R.timerStop(store.getState())));
   on(OP.TIMER_RESET, S.timerResetSchema, (d) => apply(R.timerReset(store.getState(), d.totalSeconds)));
 
-  on(OP.RESET_GAME, empty, () => {
-    store.replace(initialGameState());
+  /**
+   * Both resets start a new episode: the state goes out first (phones see the
+   * new episode and sign out), then every voter sign-up is deleted so they
+   * register again after signing back in.
+   */
+  async function newEpisode(next: GameState, what: string): Promise<Partial<Ack>> {
+    store.replace(next);
     broadcaster.broadcastFull();
+    try {
+      const count = await clearAllVoters();
+      logger.info({ count }, `${what}: voter sign-ups cleared`);
+      return {};
+    } catch (e) {
+      logger.error({ err: e instanceof Error ? e.message : e }, `${what}: clearing voter sign-ups failed`);
+      return { warning: 'voters_not_cleared' };
+    }
+  }
+
+  on(OP.RESET_GAME, empty, () => newEpisode(initialGameState(), 'Full reset'));
+  on(OP.SOFT_REFRESH, empty, () => newEpisode(R.softRefresh(store.getState()), 'Soft refresh'));
+
+  // ── Export (read-only): the history no screen gets, plus voter sign-ups ────
+  on(OP.EXPORT_DATA, empty, async () => {
+    const s = store.getState();
+    let voters: Awaited<ReturnType<typeof listVoters>> = [];
+    let votersError = false;
+    try {
+      voters = await listVoters();
+    } catch (e) {
+      votersError = true;
+      logger.error({ err: e instanceof Error ? e.message : e }, 'Export: reading voter sign-ups failed');
+    }
+    return {
+      export: {
+        exportedAt: Date.now(),
+        episodeStartedAt: s.episodeStartedAt,
+        voters,
+        votersError,
+        voteHistory: s.voteHistory,
+        scoreLog: s.scoreLog,
+        roundLog: s.roundLog,
+      },
+    };
   });
 
   // ── Status strip (read-only, polled every few seconds) ─────────────────────
@@ -163,11 +218,5 @@ export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): vo
         uptimeS: Math.round(process.uptime()),
       },
     };
-  });
-
-  on(OP.DELETE_USER_DATA, empty, async () => {
-    apply(R.deleteUserData(store.getState()));
-    const count = await clearAllVoters();
-    logger.info({ count }, 'Operator deleted user data');
   });
 }

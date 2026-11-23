@@ -29,8 +29,12 @@ export const OP = {
   TIMER_START: 'op:timerStart',
   TIMER_STOP: 'op:timerStop',
   TIMER_RESET: 'op:timerReset',
+  /** Full reset: back to setup, everything cleared, phones signed out. */
   RESET_GAME: 'op:resetGame',
-  DELETE_USER_DATA: 'op:deleteUserData',
+  /** Soft refresh: replay from the warm-up with the same players/statements. */
+  SOFT_REFRESH: 'op:softRefresh',
+  /** Read-only: show history + voter sign-ups for the Excel export. */
+  EXPORT_DATA: 'op:exportData',
   /** Read-only: live numbers for the operator's status strip. */
   STATUS: 'op:status',
 } as const;
@@ -60,4 +64,8 @@ export interface Ack {
   registered?: boolean;
   /** op:status — live server numbers. */
   status?: unknown;
+  /** op:exportData — the export payload. */
+  export?: unknown;
+  /** Resets — set when the game reset but the sign-ups couldn't be cleared. */
+  warning?: string;
 }

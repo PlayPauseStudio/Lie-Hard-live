@@ -6,6 +6,7 @@ import { useControlAccess } from "@/contexts/ControlAccessContext";
 import { useGameState } from "@/lib/useGameState";
 import { OP } from "@/lib/realtime";
 import StatusStrip from "@/components/operator/StatusStrip";
+import { downloadShowWorkbook, type ExportData } from "@/lib/exportWorkbook";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -631,46 +632,28 @@ export default function OperatorPage() {
 
   // ── CSV Export ─────────────────────────────────────────────────────────────
 
-  function downloadCsv() {
-    if (!gameState) return;
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const filename = `lie-hard-session-${timestamp}.csv`;
-    const rows: string[][] = [];
-
-    rows.push(["PLAYER SCORES"]);
-    rows.push(["rank", "name", "score"]);
-    [...gameState.players]
-      .sort((a, b) => b.score - a.score)
-      .forEach((p, i) => rows.push([String(i + 1), p.name, String(p.score)]));
-
-    rows.push([]);
-
-    rows.push(["AUDIENCE VOTER SCORES"]);
-    rows.push(["name", "correctVotes"]);
-    Object.values(gameState.voterScores ?? {})
-      .sort((a, b) => b.correctCount - a.correctCount)
-      .forEach((v) => rows.push([v.name, String(v.correctCount)]));
-
-    rows.push([]);
-
-    rows.push(["RAW AUDIENCE VOTES"]);
-    rows.push(["uid", "displayName", "choice", "votingRound"]);
-    Object.entries(gameState.audienceVotes ?? {}).forEach(([uid, v]) =>
-      rows.push([uid, v.displayName ?? "", v.choice, v.votingRound]),
-    );
-
-    const csv = Papa.unparse(rows);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, 100);
+  /**
+   * Download the show as an Excel workbook (one sheet per kind of data). The
+   * server adds what no screen holds: every vote per round, the score and
+   * round logs, and the audience sign-ups. Returns false if it failed.
+   */
+  async function downloadExport(): Promise<boolean> {
+    if (!gameState) return false;
+    const ack = await emit(OP.EXPORT_DATA);
+    if (!ack.ok || !ack.export) {
+      alert(`Export failed: ${ack.error ?? "no data"}`);
+      return false;
+    }
+    const data = ack.export as ExportData;
+    try {
+      await downloadShowWorkbook(gameState, data);
+    } catch (e) {
+      alert(`Export failed: ${e instanceof Error ? e.message : "unknown"}`);
+      return false;
+    }
+    if (data.votersError)
+      alert("Exported, but the audience sign-ups (names/phones) couldn't be read. Votes are still in the file.");
+    return true;
   }
 
   // ── Setup: validate & start ────────────────────────────────────────────────
@@ -831,26 +814,28 @@ export default function OperatorPage() {
 
   // ── Render helpers (plain functions, NOT component definitions) ────────────
 
-  async function deleteUserData() {
-    if (
-      !confirm(
-        "Delete all audience voter data? This removes all voter profiles and votes. This cannot be undone.",
-      )
-    )
+  /**
+   * Soft refresh and full reset both download the CSV first, then start a new
+   * episode: votes and sign-ups are cleared and every phone goes back to the
+   * sign-in screen.
+   */
+  async function newEpisode(kind: "soft" | "full") {
+    const question =
+      kind === "soft"
+        ? "SOFT REFRESH: replay the show from the warm-up with the same players and statements.\n\nScores, votes and audience sign-ups are cleared, and every phone is signed out to the sign-in screen. An Excel file downloads first."
+        : "FULL RESET: back to the setup screen. Players, statements, scores, votes and audience sign-ups are all cleared, and every phone is signed out to the sign-in screen. An Excel file downloads first.\n\nThis cannot be undone.";
+    if (!confirm(question)) return;
+    // Keep a copy first; if it can't be made, nothing is wiped.
+    if (!(await downloadExport())) {
+      alert("Nothing was reset because the Excel download failed.");
       return;
-    if (
-      !confirm(
-        "FINAL CONFIRMATION: All voter accounts and votes will be permanently deleted. Continue?",
-      )
-    )
-      return;
-    // Server clears voter records (Admin SDK) and resets votes/voterScores.
-    const ack = await emit(OP.DELETE_USER_DATA);
-    alert(
-      ack.ok
-        ? "Deleted all voter accounts and cleared all votes."
-        : `Error: ${ack.error ?? "unknown"}`,
-    );
+    }
+    const ack = await emit(kind === "soft" ? OP.SOFT_REFRESH : OP.RESET_GAME);
+    if (!ack.ok) alert(`Reset failed: ${ack.error ?? "unknown"}`);
+    else if (ack.warning)
+      alert(
+        "The game was reset and phones were signed out, but the audience sign-ups couldn't be cleared — people who sign back in will skip the name/phone form.",
+      );
   }
 
   function applyScore(playerId: number, sign: 1 | -1) {
@@ -1305,7 +1290,7 @@ export default function OperatorPage() {
             >
               DATA
             </p>
-            {panelBtn("↓ DOWNLOAD CSV", downloadCsv, {
+            {panelBtn("↓ DOWNLOAD EXCEL", () => void downloadExport(), {
               backgroundColor: "#0d0d0f",
               color: "#a1a1aa",
               border: "1px solid #3f3f46",
@@ -1322,25 +1307,28 @@ export default function OperatorPage() {
             >
               DANGER
             </p>
-            {panelBtn(
-              "RESET GAME",
-              () => {
-                if (confirm("Reset the entire game? This cannot be undone.")) {
-                  downloadCsv();
-                  send(OP.RESET_GAME);
-                }
-              },
-              {
-                backgroundColor: "#1c0000",
-                color: "#f87171",
-                border: "1px solid #7f1d1d",
-              },
-            )}
-            {panelBtn("DELETE USER DATA", deleteUserData, {
+            {panelBtn("↻ SOFT REFRESH", () => newEpisode("soft"), {
+              backgroundColor: "#1a1200",
+              color: "#fbbf24",
+              border: "1px solid #854d0e",
+            })}
+            <p
+              className="font-mono text-[10px] leading-snug"
+              style={{ color: "#71717a" }}
+            >
+              Replay from warm-up · same players &amp; statements · signs phones out
+            </p>
+            {panelBtn("FULL RESET", () => newEpisode("full"), {
               backgroundColor: "#1c0000",
               color: "#f87171",
               border: "1px solid #7f1d1d",
             })}
+            <p
+              className="font-mono text-[10px] leading-snug"
+              style={{ color: "#71717a" }}
+            >
+              Back to setup · clears everything · signs phones out
+            </p>
           </div>
         </div>
       </aside>

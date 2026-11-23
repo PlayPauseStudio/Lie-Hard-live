@@ -1,7 +1,7 @@
 import type { RoomStore } from '../game/store';
 import type { Patch } from '../game/reducers';
 import type { AudienceVote, GameState } from '../game/state';
-import { audienceView } from '../game/redact';
+import { audienceView, fullView } from '../game/redact';
 import { SRV } from '../protocol/events';
 import { type AppServer, type AppSocket, ROOM_FULL, ROOM_AUDIENCE } from './types';
 
@@ -47,7 +47,7 @@ export class Broadcaster {
     if (socket.data.role === 'audience') {
       socket.emit(SRV.STATE_FULL, { version, state: audienceView(state) });
     } else {
-      socket.emit(SRV.STATE_FULL, { version, state });
+      socket.emit(SRV.STATE_FULL, { version, state: fullView(state) });
     }
   }
 
@@ -68,7 +68,7 @@ export class Broadcaster {
     const version = this.store.version;
     const state = this.store.getState();
     this.pendingVotes.clear();
-    this.io.to(ROOM_FULL).emit(SRV.STATE_FULL, { version, state });
+    this.io.to(ROOM_FULL).emit(SRV.STATE_FULL, { version, state: fullView(state) });
     this.sendAudience(version, true);
   }
 

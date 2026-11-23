@@ -39,7 +39,8 @@ export const OP = {
   TIMER_STOP: 'op:timerStop',
   TIMER_RESET: 'op:timerReset',
   RESET_GAME: 'op:resetGame',
-  DELETE_USER_DATA: 'op:deleteUserData',
+  SOFT_REFRESH: 'op:softRefresh',
+  EXPORT_DATA: 'op:exportData',
   STATUS: 'op:status',
 } as const;
 
@@ -62,6 +63,8 @@ export interface Ack {
   votingRound?: string | null;
   registered?: boolean;
   status?: unknown;
+  export?: unknown;
+  warning?: string;
 }
 
 export type TokenProvider = () => Promise<string | null> | string | null;

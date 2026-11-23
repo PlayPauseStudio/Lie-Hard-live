@@ -42,7 +42,21 @@ export async function getVoter(uid: string): Promise<VoterRecord | null> {
   return memory.get(uid) ?? null;
 }
 
-/** Batch-delete all voter records (operator "delete user data"). */
+/** Every voter sign-up, for the export (name and phone by uid). */
+export async function listVoters(): Promise<(VoterRecord & { uid: string })[]> {
+  const fs = getFirestore();
+  if (!fs) return [...memory.entries()].map(([uid, r]) => ({ uid, ...r }));
+  const snap = await fs.collection('voters').get();
+  return snap.docs.map((d) => ({ uid: d.id, ...(d.data() as VoterRecord) }));
+}
+
+/** Firestore allows at most 500 writes per batch. */
+const BATCH_SIZE = 400;
+
+/**
+ * Delete every voter sign-up (soft refresh / full reset), so phones register
+ * again after signing back in.
+ */
 export async function clearAllVoters(): Promise<number> {
   const fs = getFirestore();
   if (!fs) {
@@ -52,9 +66,11 @@ export async function clearAllVoters(): Promise<number> {
   }
   const snap = await fs.collection('voters').get();
   if (snap.empty) return 0;
-  const batch = fs.batch();
-  snap.forEach((d) => batch.delete(d.ref));
-  await batch.commit();
+  for (let i = 0; i < snap.docs.length; i += BATCH_SIZE) {
+    const batch = fs.batch();
+    for (const d of snap.docs.slice(i, i + BATCH_SIZE)) batch.delete(d.ref);
+    await batch.commit();
+  }
   logger.info({ count: snap.size }, 'Cleared voter records');
   return snap.size;
 }

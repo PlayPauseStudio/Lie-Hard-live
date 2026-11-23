@@ -38,8 +38,31 @@ auth, then fill `web/.env.production` from `web/.env.example`.
 
 ## Local dev
 
-- Backend: `cd server && cp .env.example .env` (set `OPERATOR_PASSWORD`), `npm install`, `npm run dev` (:8080). `npm run smoke` runs the 12 security checks.
+- Backend: `cd server && cp .env.example .env` (set `OPERATOR_PASSWORD`), `npm install`, `npm run dev` (:8080). `npm run smoke` runs the 24 checks (security, voting, export, resets).
 - Frontend: `cd web`, add `.env.local` with Firebase config + `NEXT_PUBLIC_WS_URL=http://localhost:8080`, `npm install`, `npm run dev` (:3000). Open `/operator`, `/display`, `/audience`.
+
+## Resets
+
+The operator sidebar's DANGER section has two buttons (both download the Excel export first, and
+reset nothing if that download fails):
+
+- **Soft refresh**: replays the show from the warm-up with the same players, statements and
+  Segment 3 photo. Scores, votes, voter scores and Segment 3 notes are cleared.
+- **Full reset**: back to the setup screen with everything cleared.
+
+Both start a new episode (`episodeStartedAt`) and delete every `voters/{uid}` sign-up. Any
+phone that signed in before the reset (including one closed at the time) signs out to the
+Google / email sign-in screen and registers again.
+
+## Export
+
+**↓ Download Excel** (operator sidebar, DATA) saves one workbook: Summary, Players (final score
+and points per segment), Rounds (every audience vote: statement, answer, votes per option, %
+correct), Contestant Votes (each awarded Segment 1/2/3 round), Score Log (every score change and
+its cause), Audience (name, phone, sign-up time, each round's vote with ✓/✗) and Raw Votes.
+The server keeps the per-round vote history, score log and round log in its state (and Redis
+snapshot) but never broadcasts them; they only leave in the `op:exportData` ack, together with
+the `voters` sign-ups read from Firestore.
 
 ## Show-day health
 

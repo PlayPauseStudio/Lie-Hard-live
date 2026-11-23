@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { doc, getDoc } from "firebase/firestore/lite";
 import {
@@ -75,6 +75,9 @@ interface GameState {
     showResult: boolean;
     winnerId: number | null;
   };
+  // Soft refresh / full reset start a new episode; phones signed in before it
+  // sign out.
+  episodeStartedAt?: number;
 }
 
 interface VoterDoc {
@@ -233,8 +236,8 @@ export default function AudiencePage() {
   }, []);
 
   // ── Voter doc lookup ─────────────────────────────────────────────────────
-  // Read on sign-in and again on every socket (re)connect, so a phone that was
-  // asleep through the operator's "Delete user data" re-registers on wake.
+  // Read on sign-in and again on every socket (re)connect, so a phone whose
+  // sign-up was cleared while it slept re-registers on wake.
   // Retries while the read fails, so a flaky first load can't hang on loading.
 
   useEffect(() => {
@@ -261,6 +264,30 @@ export default function AudiencePage() {
       clearTimeout(retry);
     };
   }, [user, connected]);
+
+  // ── New episode (soft refresh / full reset) ──────────────────────────────
+  // The operator wiped the votes and sign-ups: forget this phone's vote, and
+  // send anyone who signed in before the reset back to the sign-in screen.
+  // Comparing sign-in time (not "did it change while open") also catches a
+  // phone that was closed during the reset.
+  const episodeStartedAt = gameState?.episodeStartedAt ?? 0;
+  const seenEpisode = useRef<number | null>(null);
+  useEffect(() => {
+    if (!episodeStartedAt) return;
+    if (seenEpisode.current !== null && seenEpisode.current !== episodeStartedAt) {
+      setMyVote(null);
+      setShowChange(false);
+      setVoteError("");
+    }
+    seenEpisode.current = episodeStartedAt;
+    const signedInAt = Date.parse(user?.metadata.lastSignInTime ?? "");
+    if (user && signedInAt && signedInAt < episodeStartedAt) {
+      setMyVote(null);
+      setVoterDoc(null);
+      setRegFormData({ name: "", phone: "" });
+      signOut(auth).catch(() => {});
+    }
+  }, [episodeStartedAt, user]);
 
   // ── Reset showChange on new voting round ─────────────────────────────────
 

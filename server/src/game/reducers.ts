@@ -344,6 +344,28 @@ export function timerReset(_state: GameState, totalSeconds: number): Patch {
 
 // ── Danger ───────────────────────────────────────────────────────────────────
 
-export function deleteUserData(_state: GameState): Patch {
-  return { audienceVotes: {}, voterScores: {} };
+/**
+ * Soft refresh: replay the show from the warm-up with the same players,
+ * statements and Segment 3 photo. Scores, votes, voter scores and the live
+ * Segment 3 notes are cleared, and a new episode starts (phones sign out).
+ * Before the show has started there is nothing to replay, so it only clears
+ * the audience side.
+ */
+export function softRefresh(state: GameState): GameState {
+  const now = Date.now();
+  if (state.phase === 'SETUP') {
+    return { ...state, audienceVotes: {}, voterScores: {}, episodeStartedAt: now };
+  }
+  return {
+    ...buildStartState({
+      players: state.players,
+      warmup: state.warmup.statements,
+      segment1: state.segment1.statements,
+      segment2: state.segment2.statements,
+      segment3: { photoUrl: state.segment3.photoUrl, photoTitle: state.segment3.photoTitle },
+    }),
+    audienceLink: state.audienceLink,
+    audienceLinkLabel: state.audienceLinkLabel,
+    episodeStartedAt: now,
+  };
 }

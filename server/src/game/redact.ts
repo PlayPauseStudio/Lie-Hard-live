@@ -42,6 +42,8 @@ export interface AudienceGameState {
     showResult: boolean;
     winnerId: number | null;
   };
+  // Phones signed in before this sign out (soft refresh / full reset).
+  episodeStartedAt: number;
 }
 
 export function audienceView(gs: GameState): AudienceGameState {
@@ -84,17 +86,23 @@ export function audienceView(gs: GameState): AudienceGameState {
       showResult: gs.segment3.showResult,
       winnerId: gs.segment3.winnerId,
     },
+    episodeStartedAt: gs.episodeStartedAt ?? 0,
   };
 }
 
+/** Export-only history, which no screen needs. */
+export type FullView = Omit<GameState, 'voteHistory' | 'scoreLog' | 'roundLog'>;
+
 /**
  * Operator and display are trusted with the full state (the display needs the
- * answers to show results on the big screen; the operator drives the show).
+ * answers to show results on the big screen; the operator drives the show),
+ * minus the export history, which only goes out in op:exportData.
  */
-export function fullView(gs: GameState): GameState {
-  return gs;
+export function fullView(gs: GameState): FullView {
+  const { voteHistory: _v, scoreLog: _s, roundLog: _r, ...rest } = gs;
+  return rest;
 }
 
-export function viewFor(role: Role, gs: GameState): GameState | AudienceGameState {
+export function viewFor(role: Role, gs: GameState): FullView | AudienceGameState {
   return role === 'audience' ? audienceView(gs) : fullView(gs);
 }

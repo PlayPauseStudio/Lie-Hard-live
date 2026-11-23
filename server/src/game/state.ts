@@ -1,3 +1,5 @@
+import type { RoundLogEntry, ScoreLogEntry, VoteHistoryEntry } from './history';
+
 /**
  * Authoritative game state — ported from lie-hard/src/app/operator/page.tsx
  * (interface GameState + initialGameState). The server is the single owner
@@ -110,6 +112,13 @@ export interface GameState {
   };
   audienceVotes: { [uid: string]: AudienceVote };
   voterScores: { [uid: string]: VoterScore };
+  // When this episode began (epoch ms). Soft refresh and full reset start a new
+  // one; a phone that signed in before it signs out (back to the sign-in screen).
+  episodeStartedAt: number;
+  // Export-only history (never broadcast; see redact.fullView and history.ts).
+  voteHistory: { [uid: string]: VoteHistoryEntry };
+  scoreLog: ScoreLogEntry[];
+  roundLog: RoundLogEntry[];
 }
 
 /** Points awarded to the Segment 3 winner (single source of truth). */
@@ -162,5 +171,9 @@ export function initialGameState(): GameState {
     segment3: { photoUrl: null, photoTitle: null, audienceVotingOpen: false, showResult: false, winnerId: null, playerStatements: {}, shownStatements: [], points: SEG3_POINTS },
     audienceVotes: {},
     voterScores: {},
+    episodeStartedAt: Date.now(),
+    voteHistory: {},
+    scoreLog: [],
+    roundLog: [],
   };
 }
