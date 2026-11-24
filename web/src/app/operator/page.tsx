@@ -6,6 +6,13 @@ import { useControlAccess } from "@/contexts/ControlAccessContext";
 import { useGameState } from "@/lib/useGameState";
 import { OP } from "@/lib/realtime";
 import StatusStrip from "@/components/operator/StatusStrip";
+import ImposterPanel, {
+  ImposterNamesEditor,
+  cleanContestants,
+  IMPOSTER_DEFAULT_CONTESTANTS,
+  IMPOSTER_DEFAULT_TITLE,
+  type ImposterState,
+} from "@/components/operator/ImposterPanel";
 import { downloadShowWorkbook, type ExportData } from "@/lib/exportWorkbook";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -37,7 +44,14 @@ interface Segment2Statement {
 }
 
 interface GameState {
-  phase: "SETUP" | "WARMUP" | "SEGMENT1" | "SEGMENT2" | "SEGMENT3" | "FINAL";
+  phase:
+    | "SETUP"
+    | "WARMUP"
+    | "SEGMENT1"
+    | "IMPOSTER"
+    | "SEGMENT2"
+    | "SEGMENT3"
+    | "FINAL";
   players: Player[];
   showScoreboard: boolean;
   showLeaderboardModal: boolean;
@@ -90,6 +104,7 @@ interface GameState {
     shownStatements?: number[];
     points?: number;
   };
+  imposter?: ImposterState;
   audienceVotes: {
     [uid: string]: {
       choice: string;
@@ -110,6 +125,7 @@ const PHASE_ORDER: GameState["phase"][] = [
   "SETUP",
   "WARMUP",
   "SEGMENT1",
+  "IMPOSTER",
   "SEGMENT2",
   "SEGMENT3",
   "FINAL",
@@ -118,6 +134,7 @@ const PHASE_LABELS: Record<GameState["phase"], string> = {
   SETUP: "Setup",
   WARMUP: "Warmup",
   SEGMENT1: "Seg 1",
+  IMPOSTER: "Imposter",
   SEGMENT2: "Seg 2",
   SEGMENT3: "Seg 3",
   FINAL: "Final",
@@ -337,6 +354,10 @@ export default function OperatorPage() {
   const [seg2Data, setSeg2Data] = useState<Segment2Statement[]>([]);
   const [seg3Title, setSeg3Title] = useState<string>("");
   const [seg3Photo, setSeg3Photo] = useState<string>("");
+  const [impTitle, setImpTitle] = useState(IMPOSTER_DEFAULT_TITLE);
+  const [impContestants, setImpContestants] = useState(
+    IMPOSTER_DEFAULT_CONTESTANTS,
+  );
 
   const [warmupVoteLocked, setWarmupVoteLocked] = useState(false);
   const [scoreInputs, setScoreInputs] = useState<Record<number, string>>({});
@@ -628,6 +649,10 @@ export default function OperatorPage() {
     setSeg2Data(gs.segment2.statements);
     if (gs.segment3.photoTitle) setSeg3Title(gs.segment3.photoTitle);
     setSeg3Photo(gs.segment3.photoUrl ?? "");
+    if (gs.imposter) {
+      setImpTitle(gs.imposter.title);
+      setImpContestants(gs.imposter.contestants);
+    }
   }
 
   // ── CSV Export ─────────────────────────────────────────────────────────────
@@ -688,6 +713,10 @@ export default function OperatorPage() {
       segment1: seg1Data,
       segment2: seg2Data,
       segment3: { photoUrl: seg3Photo || null, photoTitle: seg3Title || null },
+      imposter: {
+        title: impTitle.trim(),
+        contestants: cleanContestants(impContestants),
+      },
     }).then((ack) => {
       alert(
         ack.ok
@@ -978,6 +1007,14 @@ export default function OperatorPage() {
             isOpen: gameState.segment2.audienceVotingOpen,
             onOpen: () => send(OP.OPEN_VOTE, { segment: "segment2" }),
             onLock: () => send(OP.LOCK_VOTE, { segment: "segment2" }),
+            label: "AUDIENCE VOTE",
+          };
+        case "IMPOSTER":
+          if (!gameState.imposter) return null;
+          return {
+            isOpen: gameState.imposter.audienceVotingOpen,
+            onOpen: () => send(OP.OPEN_VOTE, { segment: "imposter" }),
+            onLock: () => send(OP.LOCK_VOTE, { segment: "imposter" }),
             label: "AUDIENCE VOTE",
           };
         case "SEGMENT3":
@@ -1634,6 +1671,35 @@ export default function OperatorPage() {
           </div>
         )}
 
+        {/* Imposter round names (editable live too) */}
+        {countReady && (
+          <div className="space-y-3">
+            <p
+              className="font-mono text-xs uppercase tracking-widest"
+              style={{ color: "#52525b" }}
+            >
+              Imposter round — title & crowd names{" "}
+              <span style={{ color: "#3f3f46" }}>(can be changed live)</span>
+            </p>
+            <div
+              className="rounded-lg p-4"
+              style={{
+                backgroundColor: "#0d0d0f",
+                border: "1px solid #27272a",
+              }}
+            >
+              <ImposterNamesEditor
+                title={impTitle}
+                contestants={impContestants}
+                onChange={(t, cs) => {
+                  setImpTitle(t);
+                  setImpContestants(cs);
+                }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Validate & start */}
         {countReady && (
           <button
@@ -2132,13 +2198,26 @@ export default function OperatorPage() {
 
         <div className="pt-4" style={{ borderTop: "1px solid #27272a" }}>
           {allDone ? (
-            <button
-              onClick={() => send(OP.GOTO_PHASE, { phase: "SEGMENT2" })}
-              className="w-full py-4 rounded-xl font-mono text-base font-bold uppercase tracking-widest transition-colors"
-              style={{ backgroundColor: "#f59e0b", color: "#09090b" }}
-            >
-              MOVE TO SEGMENT 2 →
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => send(OP.GOTO_PHASE, { phase: "IMPOSTER" })}
+                className="flex-1 py-4 rounded-xl font-mono text-base font-bold uppercase tracking-widest transition-colors"
+                style={{ backgroundColor: "#f59e0b", color: "#09090b" }}
+              >
+                MOVE TO IMPOSTER ROUND →
+              </button>
+              <button
+                onClick={() => send(OP.GOTO_PHASE, { phase: "SEGMENT2" })}
+                className="px-5 py-4 rounded-xl font-mono text-sm font-bold uppercase tracking-widest transition-colors"
+                style={{
+                  backgroundColor: "#1a1a1a",
+                  color: "#a1a1aa",
+                  border: "1px solid #3f3f46",
+                }}
+              >
+                Skip to Segment 2
+              </button>
+            </div>
           ) : (
             <p className="font-mono text-sm" style={{ color: "#52525b" }}>
               {segment1.completedStorytellers.length} OF {players.length}{" "}
@@ -2942,6 +3021,31 @@ export default function OperatorPage() {
     );
   }
 
+  function renderImposter() {
+    if (!gameState?.imposter) return null;
+    const im = gameState.imposter;
+    return (
+      <ImposterPanel
+        imposter={im}
+        players={gameState.players}
+        audienceVotes={gameState.audienceVotes}
+        send={send}
+        timer={renderBanterTimer()}
+        pointsInput={
+          im.awarded ? null : (
+            <SegmentPointsInput
+              points={im.points}
+              onSet={(p) =>
+                send(OP.SET_SEGMENT_POINTS, { segment: "imposter", points: p })
+              }
+            />
+          )
+        }
+        onNext={() => send(OP.GOTO_PHASE, { phase: "SEGMENT2" })}
+      />
+    );
+  }
+
   function renderFinal() {
     const audienceUrl = `${origin}/audience`;
     return (
@@ -3204,7 +3308,9 @@ export default function OperatorPage() {
                             total
                           : p === "SEGMENT3"
                             ? gameState.segment3.showResult
-                            : false);
+                            : p === "IMPOSTER"
+                              ? !!gameState.imposter?.awarded
+                              : false);
                     return (
                       <option
                         key={p}
@@ -3452,6 +3558,12 @@ export default function OperatorPage() {
             title="SEGMENT 1 — TRUTH OR LIE"
             currentPhase={currentPhase}
             render={renderSeg1}
+          />
+          <SectionCard
+            id="IMPOSTER"
+            title={`IMPOSTER — ${(gameState.imposter?.title ?? "").toUpperCase()}`}
+            currentPhase={currentPhase}
+            render={renderImposter}
           />
           <SectionCard
             id="SEGMENT2"

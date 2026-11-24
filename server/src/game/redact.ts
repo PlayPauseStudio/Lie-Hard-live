@@ -42,6 +42,14 @@ export interface AudienceGameState {
     showResult: boolean;
     winnerId: number | null;
   };
+  // No statements or panel picks, and the answer only after the reveal.
+  imposter: {
+    title: string;
+    contestants: { id: number; name: string }[];
+    audienceVotingOpen: boolean;
+    showResult: boolean;
+    imposterId: number | null;
+  };
   // Phones signed in before this sign out (soft refresh / full reset).
   episodeStartedAt: number;
 }
@@ -85,6 +93,13 @@ export function audienceView(gs: GameState): AudienceGameState {
       audienceVotingOpen: gs.segment3.audienceVotingOpen,
       showResult: gs.segment3.showResult,
       winnerId: gs.segment3.winnerId,
+    },
+    imposter: {
+      title: gs.imposter.title,
+      contestants: gs.imposter.contestants,
+      audienceVotingOpen: gs.imposter.audienceVotingOpen,
+      showResult: gs.imposter.showResult,
+      imposterId: gs.imposter.showResult ? gs.imposter.imposterId : null,
     },
     episodeStartedAt: gs.episodeStartedAt ?? 0,
   };

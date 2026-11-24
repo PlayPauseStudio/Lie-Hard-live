@@ -32,7 +32,13 @@ export interface Segment2Statement {
   lieIndex: number; // 0-based index of the lie statement
 }
 
-export type Phase = 'SETUP' | 'WARMUP' | 'SEGMENT1' | 'SEGMENT2' | 'SEGMENT3' | 'FINAL';
+export type Phase = 'SETUP' | 'WARMUP' | 'SEGMENT1' | 'IMPOSTER' | 'SEGMENT2' | 'SEGMENT3' | 'FINAL';
+
+/** A crowd member playing the Imposter round. */
+export interface ImposterContestant {
+  id: number;
+  name: string;
+}
 
 export interface AudienceVote {
   choice: string;
@@ -110,6 +116,26 @@ export interface GameState {
     // Points the winner is awarded (operator-adjustable).
     points: number;
   };
+  // Imposter round: crowd members, one of whom has the empty box. The panel and
+  // the audience vote for who they think it is. Playable at any point in the show.
+  imposter: {
+    title: string;
+    contestants: ImposterContestant[];
+    // Operator-written live summary of each contestant's statement, by contestant id.
+    statements: { [contestantId: number]: string };
+    // Contestant ids whose statement is shown on the display.
+    shownStatements: number[];
+    // The answer. Can be set before the round or only at the reveal.
+    imposterId: number | null;
+    // Each panelist's pick (contestant id), logged by the operator.
+    playerVotes: { [playerId: number]: number | null };
+    audienceVotingOpen: boolean;
+    showResult: boolean;
+    // Panel points have been given (changing the answer or a pick re-scores).
+    awarded: boolean;
+    // Points per panelist who picks the imposter (operator-adjustable).
+    points: number;
+  };
   audienceVotes: { [uid: string]: AudienceVote };
   voterScores: { [uid: string]: VoterScore };
   // When this episode began (epoch ms). Soft refresh and full reset start a new
@@ -126,6 +152,23 @@ export const SEG3_POINTS = 50;
 /** Points per correct/incorrect vote in Segments 1 and 2. */
 export const SEG1_POINTS = 10;
 export const SEG2_POINTS = 20;
+/** Points per panelist who spots the imposter. */
+export const IMPOSTER_POINTS = 10;
+
+export function initialImposter(): GameState['imposter'] {
+  return {
+    title: 'Imposter Round',
+    contestants: [1, 2, 3, 4].map((id) => ({ id, name: `Person ${id}` })),
+    statements: {},
+    shownStatements: [],
+    imposterId: null,
+    playerVotes: {},
+    audienceVotingOpen: false,
+    showResult: false,
+    awarded: false,
+    points: IMPOSTER_POINTS,
+  };
+}
 
 export function initialGameState(): GameState {
   return {
@@ -169,6 +212,7 @@ export function initialGameState(): GameState {
       points: SEG2_POINTS,
     },
     segment3: { photoUrl: null, photoTitle: null, audienceVotingOpen: false, showResult: false, winnerId: null, playerStatements: {}, shownStatements: [], points: SEG3_POINTS },
+    imposter: initialImposter(),
     audienceVotes: {},
     voterScores: {},
     episodeStartedAt: Date.now(),

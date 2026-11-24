@@ -27,7 +27,7 @@ export interface ScoreLogEntry {
 /** A Segment 1/2/3 round as it was awarded: answer, contestant votes, points. */
 export interface RoundLogEntry {
   ts: number;
-  segment: 'Segment 1' | 'Segment 2' | 'Segment 3';
+  segment: 'Segment 1' | 'Segment 2' | 'Segment 3' | 'Imposter';
   storyteller: string;
   statement: string;
   answer: string;
@@ -43,6 +43,9 @@ const EVENT_TEXT: Record<string, string> = {
   'op:adjustScore': 'Manual score change',
   'op:editSeg1': 'Segment 1 answer edited (re-scored)',
   'op:editSeg2': 'Segment 2 answer edited (re-scored)',
+  'op:awardImposter': 'Imposter round awarded',
+  'op:imposterSet': 'Imposter changed (re-scored)',
+  'op:imposterPick': 'Imposter pick changed (re-scored)',
 };
 
 export function recordVoteHistory(gs: GameState, uid: string, round: string, choice: string, name: string | undefined, ts: number): void {
@@ -117,6 +120,24 @@ export function logSegment3Round(gs: GameState, winnerId: number): void {
     statement: s3.photoTitle ?? '',
     answer: `Winner: ${gs.players.find((p) => p.id === winnerId)?.name ?? winnerId}`,
     points: s3.points,
+    votes,
+  });
+}
+
+/** Snapshot the Imposter round when the panel's points are awarded. */
+export function logImposterRound(gs: GameState): void {
+  const im = gs.imposter;
+  const name = (id: number | null | undefined) =>
+    id == null ? '' : (im.contestants.find((c) => c.id === id)?.name ?? `Person ${id}`);
+  const votes: Record<string, string> = {};
+  for (const p of gs.players) votes[p.name] = name(im.playerVotes[p.id]) || '(no vote)';
+  gs.roundLog.push({
+    ts: Date.now(),
+    segment: 'Imposter',
+    storyteller: name(im.imposterId),
+    statement: `${im.title}: ${im.contestants.map((c) => c.name).join(', ')}`,
+    answer: `Imposter: ${name(im.imposterId)}`,
+    points: im.points,
     votes,
   });
 }

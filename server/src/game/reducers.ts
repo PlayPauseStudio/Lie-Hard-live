@@ -1,5 +1,5 @@
-import type { GameState, Player, Phase, WarmupStatement, Segment1Statement, Segment2Statement } from './state';
-import { initialGameState, SEG1_POINTS, SEG2_POINTS, SEG3_POINTS } from './state';
+import type { GameState, Player, Phase, WarmupStatement, Segment1Statement, Segment2Statement, ImposterContestant } from './state';
+import { initialGameState, initialImposter, SEG1_POINTS, SEG2_POINTS, SEG3_POINTS } from './state';
 import { answerSwapDelta, awardVoterScores, computeSegmentAward, voterScoreSwap } from './scoring';
 
 /**
@@ -11,7 +11,7 @@ import { answerSwapDelta, awardVoterScores, computeSegmentAward, voterScoreSwap 
 export type Patch = Partial<GameState>;
 
 export type SegmentKey = 'segment1' | 'segment2';
-export type VoteSegmentKey = 'warmup' | 'segment1' | 'segment2' | 'segment3';
+export type VoteSegmentKey = 'warmup' | 'segment1' | 'segment2' | 'segment3' | 'imposter';
 export type DisplayKey =
   | 'showScoreboard'
   | 'showLeaderboardModal'
@@ -33,6 +33,7 @@ export interface StartShowPayload {
   segment1: Segment1Statement[];
   segment2: Segment2Statement[];
   segment3: { photoUrl?: string | null; photoTitle?: string | null };
+  imposter?: { title: string; contestants: ImposterContestant[] };
 }
 
 /** Full replacement state for a new show (returns a complete GameState). */
@@ -56,6 +57,11 @@ export function buildStartState(payload: StartShowPayload): GameState {
       ...init.segment3,
       photoUrl: payload.segment3.photoUrl ?? null,
       photoTitle: payload.segment3.photoTitle ?? null,
+    },
+    imposter: {
+      ...init.imposter,
+      ...(payload.imposter ?? {}),
+      playerVotes: emptyPlayerVotes(players),
     },
   };
 }
@@ -112,6 +118,15 @@ export function reveal(state: GameState, segment: VoteSegmentKey): Patch {
       voterScores: awardVoterScores(state, `seg2-${s.currentStorytellerId}`, `STATEMENT_${stmt.lieIndex}`),
     };
   }
+  if (segment === 'imposter') {
+    // The answer has to be in before the reveal (the operator may only decide now).
+    const im = state.imposter;
+    if (im.imposterId == null) return {};
+    return {
+      imposter: { ...im, showResult: true, audienceVotingOpen: false },
+      voterScores: awardVoterScores(state, 'imposter', String(im.imposterId)),
+    };
+  }
   // segment3 reveal happens via awardSegment3
   return {};
 }
@@ -154,9 +169,11 @@ export function selectStoryteller(state: GameState, segment: SegmentKey, playerI
 
 export function setSegmentPoints(
   state: GameState,
-  segment: 'segment1' | 'segment2' | 'segment3',
+  segment: 'segment1' | 'segment2' | 'segment3' | 'imposter',
   points: number,
 ): Patch {
+  // Imposter re-scoring assumes the value it was awarded at.
+  if (segment === 'imposter' && state.imposter.awarded) return {};
   return { [segment]: { ...state[segment], points } } as Patch;
 }
 
@@ -309,6 +326,110 @@ export function awardSegment3(state: GameState, winnerId: number): Patch {
   };
 }
 
+// ── Imposter round ───────────────────────────────────────────────────────────
+
+/** Title and crowd-member names: filled in at setup, editable live. */
+export function setImposterSetup(state: GameState, title: string, contestants: ImposterContestant[]): Patch {
+  const im = state.imposter;
+  const ids = new Set(contestants.map((c) => c.id));
+  const keep = <T>(rec: Record<number, T>): Record<number, T> =>
+    Object.fromEntries(Object.entries(rec).filter(([id]) => ids.has(Number(id)))) as Record<number, T>;
+  return {
+    imposter: {
+      ...im,
+      title: title.trim() || initialImposter().title,
+      contestants: contestants.map((c) => ({ id: c.id, name: c.name.trim() })),
+      statements: keep(im.statements),
+      shownStatements: im.shownStatements.filter((id) => ids.has(id)),
+      // A removed contestant can't stay the answer or anyone's pick.
+      imposterId: im.imposterId != null && ids.has(im.imposterId) ? im.imposterId : null,
+      playerVotes: Object.fromEntries(
+        Object.entries(im.playerVotes).map(([pid, c]) => [pid, c != null && ids.has(c) ? c : null]),
+      ),
+    },
+  };
+}
+
+export function setImposterStatement(state: GameState, contestantId: number, statement: string): Patch {
+  const im = state.imposter;
+  return { imposter: { ...im, statements: { ...im.statements, [contestantId]: statement } } };
+}
+
+export function toggleImposterStatement(state: GameState, contestantId: number): Patch {
+  const im = state.imposter;
+  const shown = im.shownStatements.includes(contestantId)
+    ? im.shownStatements.filter((x) => x !== contestantId)
+    : [...im.shownStatements, contestantId];
+  return { imposter: { ...im, shownStatements: shown } };
+}
+
+/** Panel points for `answer`: the round's points to each panelist who picked it. */
+function imposterPanelTotals(state: GameState, answer: number | null): Record<number, number> {
+  const im = state.imposter;
+  return Object.fromEntries(
+    state.players.map((p) => [p.id, answer != null && im.playerVotes[p.id] === answer ? im.points : 0]),
+  );
+}
+
+function addScores(players: Player[], delta: Record<number, number>): Player[] {
+  return players.map((p) => ({ ...p, score: p.score + (delta[p.id] ?? 0) }));
+}
+
+/**
+ * Set (or change) who the imposter is. Works before the round or at the reveal;
+ * changing it after the reveal re-scores the audience, and after the award also
+ * moves the panel's points.
+ */
+export function setImposterId(state: GameState, imposterId: number | null): Patch {
+  const im = state.imposter;
+  if (imposterId != null && !im.contestants.some((c) => c.id === imposterId)) return {};
+  // Once revealed there must always be an answer on screen.
+  if (imposterId == null && im.showResult) return {};
+  const patch: Patch = { imposter: { ...im, imposterId } };
+  if (im.showResult && im.imposterId != null && imposterId != null && im.imposterId !== imposterId) {
+    patch.voterScores = voterScoreSwap(state, 'imposter', String(im.imposterId), String(imposterId));
+  }
+  if (im.awarded) {
+    const before = imposterPanelTotals(state, im.imposterId);
+    const after = imposterPanelTotals(state, imposterId);
+    patch.players = addScores(
+      state.players,
+      Object.fromEntries(state.players.map((p) => [p.id, after[p.id] - before[p.id]])),
+    );
+  }
+  return patch;
+}
+
+/** Log a panelist's pick. After the award, a changed pick re-scores that panelist. */
+export function setImposterPick(state: GameState, playerId: number, contestantId: number | null): Patch {
+  const im = state.imposter;
+  if (contestantId != null && !im.contestants.some((c) => c.id === contestantId)) return {};
+  const patch: Patch = { imposter: { ...im, playerVotes: { ...im.playerVotes, [playerId]: contestantId } } };
+  if (im.awarded && im.imposterId != null) {
+    const was = im.playerVotes[playerId] === im.imposterId ? im.points : 0;
+    const now = contestantId === im.imposterId ? im.points : 0;
+    if (was !== now) patch.players = addScores(state.players, { [playerId]: now - was });
+  }
+  return patch;
+}
+
+/** Give each panelist who spotted the imposter the round's points (once). */
+export function awardImposter(state: GameState): Patch {
+  const im = state.imposter;
+  if (im.awarded || im.imposterId == null) return {};
+  const totals = imposterPanelTotals(state, im.imposterId);
+  return {
+    players: addScores(state.players, totals),
+    imposter: { ...im, awarded: true, showResult: true, audienceVotingOpen: false },
+    scorePopupDeltas: state.players
+      .filter((p) => totals[p.id] > 0)
+      .map((p) => ({ name: p.name, delta: totals[p.id] })),
+    showScorePopup: false,
+    // Awarding also reveals, for when the operator skips the separate reveal.
+    ...(im.showResult ? {} : { voterScores: awardVoterScores(state, 'imposter', String(im.imposterId)) }),
+  };
+}
+
 // ── Manual score adjust ──────────────────────────────────────────────────────
 
 export function adjustScore(state: GameState, playerId: number, delta: number): Patch {
@@ -363,6 +484,7 @@ export function softRefresh(state: GameState): GameState {
       segment1: state.segment1.statements,
       segment2: state.segment2.statements,
       segment3: { photoUrl: state.segment3.photoUrl, photoTitle: state.segment3.photoTitle },
+      imposter: { title: state.imposter.title, contestants: state.imposter.contestants },
     }),
     audienceLink: state.audienceLink,
     audienceLinkLabel: state.audienceLinkLabel,

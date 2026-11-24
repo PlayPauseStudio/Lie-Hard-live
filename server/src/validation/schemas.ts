@@ -6,8 +6,8 @@ import { z } from 'zod';
  * blunt oversized-payload abuse.
  */
 
-const phase = z.enum(['SETUP', 'WARMUP', 'SEGMENT1', 'SEGMENT2', 'SEGMENT3', 'FINAL']);
-const voteSegment = z.enum(['warmup', 'segment1', 'segment2', 'segment3']);
+const phase = z.enum(['SETUP', 'WARMUP', 'SEGMENT1', 'IMPOSTER', 'SEGMENT2', 'SEGMENT3', 'FINAL']);
+const voteSegment = z.enum(['warmup', 'segment1', 'segment2', 'segment3', 'imposter']);
 const segmentKey = z.enum(['segment1', 'segment2']);
 const displayKey = z.enum([
   'showScoreboard',
@@ -20,6 +20,15 @@ const displayKey = z.enum([
 ]);
 
 const shortStr = z.string().max(500);
+
+const imposterSetup = z.object({
+  title: z.string().max(120),
+  contestants: z
+    .array(z.object({ id: z.number().int().min(1).max(99), name: z.string().min(1).max(80) }))
+    .min(2)
+    .max(8)
+    .refine((cs) => new Set(cs.map((c) => c.id)).size === cs.length, 'duplicate contestant ids'),
+});
 // Player photos are small base64 data URIs (~<80KB after client downscale to 400px).
 const photoStr = z.string().max(300_000);
 
@@ -61,6 +70,7 @@ export const startShowSchema = z.object({
     photoUrl: photoStr.nullable().default(null),
     photoTitle: z.string().max(200).nullable().default(null),
   }),
+  imposter: imposterSetup.optional(),
 });
 
 export const gotoPhaseSchema = z.object({ phase });
@@ -97,8 +107,13 @@ export const setSeg3StatementSchema = z.object({
 export const toggleSeg3StatementSchema = z.object({ playerId: z.number().int() });
 export const awardSegmentSchema = z.object({ segment: segmentKey });
 export const awardSegment3Schema = z.object({ winnerId: z.number().int() });
+export const imposterSetupSchema = imposterSetup;
+export const imposterStatementSchema = z.object({ contestantId: z.number().int(), statement: shortStr });
+export const imposterToggleSchema = z.object({ contestantId: z.number().int() });
+export const imposterSetSchema = z.object({ imposterId: z.number().int().nullable() });
+export const imposterPickSchema = z.object({ playerId: z.number().int(), contestantId: z.number().int().nullable() });
 export const setSegmentPointsSchema = z.object({
-  segment: z.enum(['segment1', 'segment2', 'segment3']),
+  segment: z.enum(['segment1', 'segment2', 'segment3', 'imposter']),
   points: z.number().int().min(0).max(100_000),
 });
 export const setAudienceLinkSchema = z.object({

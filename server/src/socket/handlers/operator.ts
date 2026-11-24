@@ -7,7 +7,7 @@ import type { AppSocket } from '../types';
 import { logger } from '../../util/logger';
 import { OP, type Ack } from '../../protocol/events';
 import { clearAllVoters, listVoters } from '../../persistence/voters';
-import { logScoreChanges, logSegment3Round, logSegmentRound } from '../../game/history';
+import { logImposterRound, logScoreChanges, logSegment3Round, logSegmentRound } from '../../game/history';
 import { getCurrentVotingRound } from '../../game/voting';
 import { worstStallMs } from '../../util/loadMonitor';
 import * as R from '../../game/reducers';
@@ -133,6 +133,27 @@ export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): vo
     apply(R.awardSegment3(store.getState(), d.winnerId));
   }
   );
+
+  // ── Imposter round ─────────────────────────────────────────────────────────
+  on(OP.IMPOSTER_SETUP, S.imposterSetupSchema, (d) =>
+    apply(R.setImposterSetup(store.getState(), d.title, d.contestants)),
+  );
+  on(OP.IMPOSTER_STATEMENT, S.imposterStatementSchema, (d) =>
+    apply(R.setImposterStatement(store.getState(), d.contestantId, d.statement)),
+  );
+  on(OP.IMPOSTER_TOGGLE_STATEMENT, S.imposterToggleSchema, (d) =>
+    apply(R.toggleImposterStatement(store.getState(), d.contestantId)),
+  );
+  on(OP.IMPOSTER_SET, S.imposterSetSchema, (d) => apply(R.setImposterId(store.getState(), d.imposterId)));
+  on(OP.IMPOSTER_PICK, S.imposterPickSchema, (d) =>
+    apply(R.setImposterPick(store.getState(), d.playerId, d.contestantId)),
+  );
+  on(OP.AWARD_IMPOSTER, empty, () => {
+    const patch = R.awardImposter(store.getState());
+    if (!patch.imposter) return;
+    logImposterRound(store.getState());
+    apply(patch);
+  });
 
   on(OP.SET_SEGMENT_POINTS, S.setSegmentPointsSchema, (d) =>
     apply(R.setSegmentPoints(store.getState(), d.segment, d.points)),

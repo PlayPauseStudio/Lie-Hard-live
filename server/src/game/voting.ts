@@ -20,6 +20,7 @@ export function getCurrentVotingRound(gs: GameState): string | null {
     return `seg2-${gs.segment2.currentStorytellerId}`;
   }
   if (gs.phase === 'SEGMENT3' && gs.segment3.audienceVotingOpen) return 'seg3';
+  if (gs.phase === 'IMPOSTER' && gs.imposter.audienceVotingOpen) return 'imposter';
   return null;
 }
 
@@ -48,6 +49,9 @@ export function validateChoice(gs: GameState, round: string, choice: string): st
   if (round === 'seg3') {
     const id = Number(choice);
     return gs.players.some((p) => p.id === id) ? null : 'invalid_choice';
+  }
+  if (round === 'imposter') {
+    return gs.imposter.contestants.some((c) => String(c.id) === choice) ? null : 'invalid_choice';
   }
   return 'unknown_round';
 }

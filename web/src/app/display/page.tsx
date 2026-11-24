@@ -32,7 +32,14 @@ interface Segment2Statement {
 }
 
 interface GameState {
-  phase: "SETUP" | "WARMUP" | "SEGMENT1" | "SEGMENT2" | "SEGMENT3" | "FINAL";
+  phase:
+    | "SETUP"
+    | "WARMUP"
+    | "SEGMENT1"
+    | "IMPOSTER"
+    | "SEGMENT2"
+    | "SEGMENT3"
+    | "FINAL";
   players: Player[];
   showScoreboard: boolean;
   showLeaderboardModal: boolean;
@@ -80,6 +87,16 @@ interface GameState {
     playerStatements?: { [playerId: number]: string };
     shownStatements?: number[];
     points?: number;
+  };
+  imposter?: {
+    title: string;
+    contestants: { id: number; name: string }[];
+    statements: { [contestantId: number]: string };
+    shownStatements: number[];
+    imposterId: number | null;
+    playerVotes: { [playerId: number]: number | null };
+    audienceVotingOpen: boolean;
+    showResult: boolean;
   };
   audienceVotes: {
     [deviceId: string]: {
@@ -1966,6 +1983,171 @@ function Segment3Screen({ gameState }: { gameState: GameState }) {
   );
 }
 
+// ── Imposter round ─────────────────────────────────────────────────────────
+
+function ImposterScreen({ gameState }: { gameState: GameState }) {
+  const im = gameState.imposter;
+  if (!im) return <SetupScreen />;
+  const n = im.contestants.length;
+  // One row up to 4 people, two rows beyond that.
+  const cols = n <= 4 ? n : Math.ceil(n / 2);
+  const showVotes = gameState.showVoteBars ?? true;
+  const revealed = im.showResult && im.imposterId != null;
+
+  const counts: Record<number, number> = Object.fromEntries(
+    im.contestants.map((c) => [c.id, 0]),
+  );
+  Object.values(gameState.audienceVotes ?? {}).forEach((v) => {
+    if (v.votingRound !== "imposter") return;
+    const id = parseInt(v.choice, 10);
+    if (counts[id] !== undefined) counts[id]++;
+  });
+  const totalVotes = Object.values(counts).reduce((a, b) => a + b, 0);
+
+  const spotters = gameState.players.filter(
+    (p) => revealed && im.playerVotes?.[p.id] === im.imposterId,
+  );
+  const nameFont =
+    n <= 4 ? "clamp(20px, 2.6vw, 52px)" : "clamp(16px, 2vw, 40px)";
+  const stmtFont =
+    n <= 4 ? "clamp(15px, 1.75vw, 36px)" : "clamp(13px, 1.4vw, 28px)";
+
+  return (
+    <div
+      className="w-full h-full flex flex-col justify-center overflow-hidden"
+      style={{
+        backgroundColor: "#08080a",
+        padding: "0 3.33vw",
+        gap: "2vw",
+      }}
+    >
+      <p
+        className="font-display font-bold uppercase tracking-widest leading-none text-white text-center"
+        style={{ fontSize: "clamp(18px, 2.5vw, 48px)" }}
+      >
+        {revealed ? "The imposter was…" : "Who has the empty box?"}
+      </p>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+          gap: "1.5vw",
+        }}
+      >
+        {im.contestants.map((c) => {
+          const isImposter = revealed && c.id === im.imposterId;
+          const dim = revealed && !isImposter;
+          const count = counts[c.id] ?? 0;
+          const pct = totalVotes ? Math.round((count / totalVotes) * 100) : 0;
+          const shown = im.shownStatements.includes(c.id);
+          const statement = im.statements?.[c.id] ?? "";
+          const accent = isImposter ? "#f87171" : "#f59e0b";
+          return (
+            <div
+              key={c.id}
+              className="rounded-3xl flex flex-col transition-all duration-700"
+              style={{
+                border: `${isImposter ? 4 : 2}px solid ${accent}`,
+                backgroundColor: isImposter
+                  ? "rgba(69,10,10,0.55)"
+                  : "rgba(13,13,15,0.97)",
+                boxShadow: isImposter
+                  ? "0 0 4vw rgba(248,113,113,0.45)"
+                  : "none",
+                opacity: dim ? 0.35 : 1,
+                padding: "clamp(12px, 1.6vw, 32px)",
+                gap: "clamp(8px, 1vw, 20px)",
+                minHeight: "clamp(140px, 18vw, 360px)",
+              }}
+            >
+              <p
+                className="font-display font-black leading-none"
+                style={{ fontSize: nameFont, color: accent }}
+              >
+                {c.name}
+              </p>
+              {isImposter && (
+                <p
+                  className="font-display font-black uppercase tracking-widest leading-none animate-fade-in"
+                  style={{
+                    fontSize: "clamp(16px, 2vw, 40px)",
+                    color: "#ffffff",
+                  }}
+                >
+                  🕵 Imposter
+                </p>
+              )}
+              {shown ? (
+                <p
+                  className="font-display leading-tight flex-1"
+                  style={{ fontSize: stmtFont, color: "#ffffff" }}
+                >
+                  {statement || "—"}
+                </p>
+              ) : (
+                <p
+                  className="font-display uppercase tracking-widest flex-1"
+                  style={{
+                    fontSize: "clamp(12px, 1.3vw, 26px)",
+                    color: "#3f3f46",
+                  }}
+                >
+                  {isImposter ? "" : "…"}
+                </p>
+              )}
+              {showVotes && (
+                <div className="flex flex-col" style={{ gap: "0.4vw" }}>
+                  <span
+                    className="font-display font-bold"
+                    style={{
+                      color: "#a1a1aa",
+                      fontSize: "clamp(13px, 1.3vw, 26px)",
+                    }}
+                  >
+                    {count} · {pct}%
+                  </span>
+                  <div
+                    className="w-full rounded-full overflow-hidden"
+                    style={{
+                      height: "clamp(6px, 0.8vw, 14px)",
+                      backgroundColor: "#18181b",
+                    }}
+                  >
+                    <div
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{ width: `${pct}%`, backgroundColor: accent }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {revealed && (
+        <p
+          className="font-display font-bold text-center animate-fade-in"
+          style={{ fontSize: "clamp(16px, 2vw, 40px)", color: "#f59e0b" }}
+        >
+          {spotters.length
+            ? `Spotted by ${spotters.map((p) => p.name).join(", ")}`
+            : "Nobody on the panel spotted them"}
+        </p>
+      )}
+      {showVotes && !revealed && (
+        <p
+          className="font-mono text-center"
+          style={{ color: "#3f3f46", fontSize: "clamp(11px, 1.04vw, 20px)" }}
+        >
+          {totalVotes} vote{totalVotes !== 1 ? "s" : ""}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────
 
 export default function DisplayPage() {
@@ -2094,6 +2276,8 @@ export default function DisplayPage() {
         return <WarmupScreen gameState={gameState!} />;
       case "SEGMENT1":
         return <Segment1Screen gameState={gameState!} />;
+      case "IMPOSTER":
+        return <ImposterScreen gameState={gameState!} />;
       case "SEGMENT2":
         return <Segment2Screen gameState={gameState!} />;
       case "SEGMENT3":
@@ -2143,6 +2327,8 @@ export default function DisplayPage() {
         return "Round Warmup";
       case "SEGMENT1":
         return "Round 1";
+      case "IMPOSTER":
+        return gameState.imposter?.title ?? "Imposter Round";
       case "SEGMENT2":
         return "Round 2";
       case "SEGMENT3":
@@ -2172,6 +2358,8 @@ export default function DisplayPage() {
           : "locked";
       case "SEGMENT3":
         return gameState.segment3.audienceVotingOpen ? "open" : "closed";
+      case "IMPOSTER":
+        return gameState.imposter?.audienceVotingOpen ? "open" : "closed";
       default:
         return "locked";
     }

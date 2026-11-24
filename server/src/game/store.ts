@@ -1,5 +1,5 @@
 import type { GameState, AudienceVote } from './state';
-import { initialGameState } from './state';
+import { initialGameState, initialImposter } from './state';
 import { recordVoteHistory } from './history';
 import type { Patch } from './reducers';
 
@@ -68,6 +68,8 @@ export class RoomStore {
       voteHistory: snap.state.voteHistory ?? {},
       scoreLog: snap.state.scoreLog ?? [],
       roundLog: snap.state.roundLog ?? [],
+      // Snapshots from before the Imposter round existed.
+      imposter: snap.state.imposter ?? initialImposter(),
     };
     this._version = snap.version;
   }

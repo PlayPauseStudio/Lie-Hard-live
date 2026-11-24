@@ -28,6 +28,7 @@ interface ShowState {
   segment1: { statements: { playerId: number; playerName: string; statement: string; isLie: boolean }[] };
   segment2: { statements: { playerId: number; playerName: string; statements: string[]; lieIndex: number }[] };
   segment3: { photoTitle?: string | null; winnerId: number | null; showResult?: boolean };
+  imposter?: { title: string; contestants: { id: number; name: string }[]; imposterId: number | null };
   voterScores: { [uid: string]: { name: string; correctCount: number } };
   audienceVotes: { [uid: string]: unknown };
 }
@@ -64,6 +65,7 @@ const PHASE_NAME: Record<string, string> = {
   SETUP: "Setup",
   WARMUP: "Warm-up",
   SEGMENT1: "Segment 1",
+  IMPOSTER: "Imposter",
   SEGMENT2: "Segment 2",
   SEGMENT3: "Segment 3",
   FINAL: "Final",
@@ -76,7 +78,7 @@ interface Round {
   title: string;
   statement: string;
   options: string[];
-  /** Correct choice, or null when it isn't decided (Segment 3 before the award). */
+  /** Correct choice, or null when it isn't decided (Segment 3 / Imposter before the answer). */
   answer: string | null;
 }
 
@@ -100,6 +102,15 @@ function rounds(gs: ShowState): Round[] {
       statement: st.statement,
       options: ["TRUTH", "LIE"],
       answer: st.isLie ? "LIE" : "TRUTH",
+    });
+  if (gs.imposter)
+    out.push({
+      key: "imposter",
+      segment: "Imposter",
+      title: gs.imposter.title,
+      statement: gs.imposter.contestants.map((c) => c.name).join(", "),
+      options: gs.imposter.contestants.map((c) => String(c.id)),
+      answer: gs.imposter.imposterId != null ? String(gs.imposter.imposterId) : null,
     });
   for (const st of gs.segment2.statements)
     out.push({
@@ -125,6 +136,7 @@ function choiceLabel(gs: ShowState, round: string, choice: string): string {
   const m = /^STATEMENT_(\d+)$/.exec(choice);
   if (m) return `Statement ${Number(m[1]) + 1}`;
   if (round === "seg3") return gs.players.find((p) => String(p.id) === choice)?.name ?? choice;
+  if (round === "imposter") return gs.imposter?.contestants.find((c) => String(c.id) === choice)?.name ?? choice;
   return choice;
 }
 
@@ -152,7 +164,7 @@ function summarySheet(gs: ShowState, d: ExportData, list: Round[]): Row[] {
 }
 
 function playersSheet(gs: ShowState, d: ExportData): Row[] {
-  const phases = ["WARMUP", "SEGMENT1", "SEGMENT2", "SEGMENT3", "FINAL"];
+  const phases = ["WARMUP", "SEGMENT1", "IMPOSTER", "SEGMENT2", "SEGMENT3", "FINAL"];
   const byPlayer = new Map<string, Record<string, number>>();
   for (const e of d.scoreLog) {
     const row = byPlayer.get(e.player) ?? {};

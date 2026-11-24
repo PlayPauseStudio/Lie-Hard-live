@@ -43,7 +43,14 @@ interface Segment2Statement {
 }
 
 interface GameState {
-  phase: "SETUP" | "WARMUP" | "SEGMENT1" | "SEGMENT2" | "SEGMENT3" | "FINAL";
+  phase:
+    | "SETUP"
+    | "WARMUP"
+    | "SEGMENT1"
+    | "IMPOSTER"
+    | "SEGMENT2"
+    | "SEGMENT3"
+    | "FINAL";
   players: Player[];
   showAudienceLink?: boolean;
   audienceLink?: string;
@@ -74,6 +81,14 @@ interface GameState {
     audienceVotingOpen: boolean;
     showResult: boolean;
     winnerId: number | null;
+  };
+  // The answer (imposterId) only arrives once it's revealed.
+  imposter?: {
+    title: string;
+    contestants: { id: number; name: string }[];
+    audienceVotingOpen: boolean;
+    showResult: boolean;
+    imposterId: number | null;
   };
   // Soft refresh / full reset start a new episode; phones signed in before it
   // sign out.
@@ -106,6 +121,8 @@ function getCurrentVotingRound(gs: GameState): string | null {
   )
     return `seg2-${gs.segment2.currentStorytellerId}`;
   if (gs.phase === "SEGMENT3" && gs.segment3?.audienceVotingOpen) return "seg3";
+  if (gs.phase === "IMPOSTER" && gs.imposter?.audienceVotingOpen)
+    return "imposter";
   return null;
 }
 
@@ -810,8 +827,12 @@ export default function AudiencePage() {
           ? "LIE"
           : choice.startsWith("STATEMENT_")
             ? `Statement ${parseInt(choice.replace("STATEMENT_", ""), 10) + 1} is the Lie`
-            : (gameState!.players.find((p) => p.id === parseInt(choice))
-                ?.name ?? `Player ${choice}`);
+            : gameState!.phase === "IMPOSTER"
+              ? (gameState!.imposter?.contestants.find(
+                  (c) => String(c.id) === choice,
+                )?.name ?? `Person ${choice}`)
+              : (gameState!.players.find((p) => p.id === parseInt(choice))
+                  ?.name ?? `Player ${choice}`);
     const color =
       choice === "TRUTH"
         ? "text-green-400"
@@ -1075,6 +1096,72 @@ export default function AudiencePage() {
             <ConfirmationMessage choice={myVote!.choice} />
           )}
           {voteErrorToast}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Imposter round ────────────────────────────────────────────────────────
+
+  const imposter = gameState.imposter;
+  if (phase === "IMPOSTER" && imposter?.audienceVotingOpen) {
+    return (
+      <div className="bg-black min-h-screen flex flex-col">
+        <Header />
+        <div className="flex-1 flex flex-col px-4 py-8">
+          <p className="text-gray-400 text-sm text-center mb-2 uppercase tracking-widest">
+            {imposter.title}
+          </p>
+          <p className="text-white text-xl text-center px-2 mb-8">
+            Who has the empty box?
+          </p>
+          {showButtons ? (
+            <>
+              {imposter.contestants.map((c) => (
+                <button
+                  key={c.id}
+                  className={`${btnBase} ${myVote?.choice === String(c.id) && showChange ? "bg-orange-500" : "bg-gray-700"} text-white`}
+                  disabled={submitting}
+                  onClick={() => {
+                    setShowChange(false);
+                    vote(String(c.id));
+                  }}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </>
+          ) : (
+            <ConfirmationMessage choice={myVote!.choice} />
+          )}
+          {voteErrorToast}
+        </div>
+      </div>
+    );
+  }
+
+  if (phase === "IMPOSTER" && imposter?.showResult && imposter.imposterId != null) {
+    const name =
+      imposter.contestants.find((c) => c.id === imposter.imposterId)?.name ??
+      "";
+    const mine = myVote?.votingRound === "imposter" ? myVote.choice : null;
+    return (
+      <div className="bg-black min-h-screen flex flex-col">
+        <Header />
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6 text-center">
+          <p className="text-gray-400 text-sm uppercase tracking-widest">
+            The imposter was
+          </p>
+          <p className="text-red-400 text-4xl font-bold">{name}</p>
+          {mine && (
+            <p
+              className={`text-xl font-semibold mt-2 ${mine === String(imposter.imposterId) ? "text-green-400" : "text-gray-400"}`}
+            >
+              {mine === String(imposter.imposterId)
+                ? "You got it!"
+                : "Not this time"}
+            </p>
+          )}
         </div>
       </div>
     );
