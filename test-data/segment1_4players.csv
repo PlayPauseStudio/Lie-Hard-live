@@ -1,0 +1,6 @@
+# Segment 1 (4 players): exactly one row per player. answer = TRUTH or LIE. This line is ignored.
+player_id,player_name,statement,answer
+1,"Test Player 1","I once missed my own birthday party because I was stuck in a lift",TRUTH
+2,"Test Player 2","I have a black belt in karate",LIE
+3,"Test Player 3","I have eaten 25 golgappas in one go",TRUTH
+4,"Test Player 4","I was on a TV quiz show as a kid",LIE

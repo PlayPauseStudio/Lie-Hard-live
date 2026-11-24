@@ -1,0 +1,14 @@
+# Segment 2 (4 players): several rows per player, exactly ONE row per player is LIE. This line is ignored.
+player_id,player_name,statement,answer
+1,Test Player 1,I have been to 14 countries,TRUTH
+1,Test Player 1,I can solve a Rubik's cube in under a minute,LIE
+1,Test Player 1,I was a school cricket captain,TRUTH
+2,Test Player 2,I have never learnt to ride a bicycle,TRUTH
+2,Test Player 2,I once met a cabinet minister on a train,TRUTH
+2,Test Player 2,I am allergic to chocolate,LIE
+3,Test Player 3,I have a pet tortoise named Speedy,LIE
+3,Test Player 3,I wrote a poem that was printed in a newspaper,TRUTH
+3,Test Player 3,I have run a half marathon,TRUTH
+4,Test Player 4,I have never had a cup of tea,LIE
+4,Test Player 4,I can play the tabla,TRUTH
+4,Test Player 4,I once got locked inside a museum after closing time,TRUTH
