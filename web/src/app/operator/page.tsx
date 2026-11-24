@@ -59,6 +59,8 @@ interface GameState {
   showScorePopup: boolean;
   showVoteBars: boolean;
   showLogo?: boolean;
+  showVotingStatus?: boolean;
+  screenText?: Record<ScreenTextKey, string>;
   showAudienceLink?: boolean;
   audienceLink?: string;
   audienceLinkLabel?: string;
@@ -118,6 +120,9 @@ interface GameState {
 }
 
 // Initial/authoritative game state now lives on the server (lie-hard-server).
+
+type ScreenTextKey = "segment1" | "segment2" | "segment3" | "imposter";
+type ResettableSegment = "warmup" | ScreenTextKey;
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -242,14 +247,68 @@ function VoteBars({ counts }: { counts: Record<string, number> }) {
   );
 }
 
+/**
+ * The big-screen heading for a segment, editable live. Same focus rule as
+ * SegmentPointsInput; sends on blur or Enter. Clearing it restores the default.
+ */
+function ScreenTextInput({
+  value,
+  onSet,
+}: {
+  value: string;
+  onSet: (text: string) => void;
+}) {
+  const [val, setVal] = useState(value);
+  const focused = useRef(false);
+  useEffect(() => {
+    if (!focused.current) setVal(value);
+  }, [value]);
+  const save = () => {
+    if (val.trim() !== value) onSet(val);
+  };
+  return (
+    <div className="mb-4 flex items-center gap-3">
+      <span className="font-mono text-xs uppercase tracking-widest shrink-0 text-zinc-400">
+        Screen heading
+      </span>
+      <input
+        type="text"
+        maxLength={120}
+        value={val}
+        onFocus={() => (focused.current = true)}
+        onBlur={() => {
+          focused.current = false;
+          save();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        }}
+        onChange={(e) => setVal(e.target.value)}
+        className="flex-1 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-amber-500"
+      />
+    </div>
+  );
+}
+
 interface SectionCardProps {
   id: GameState["phase"];
   title: string;
   currentPhase: GameState["phase"];
   render: () => React.ReactNode;
+  /** Header button that replays this segment from the start. */
+  onReset?: () => void;
+  /** The segment's big-screen heading, editable live. */
+  heading?: { value: string; onSet: (text: string) => void };
 }
 
-function SectionCard({ id, title, currentPhase, render }: SectionCardProps) {
+function SectionCard({
+  id,
+  title,
+  currentPhase,
+  render,
+  onReset,
+  heading,
+}: SectionCardProps) {
   const isActive = currentPhase === id;
   if (!isActive) return null;
 
@@ -258,15 +317,36 @@ function SectionCard({ id, title, currentPhase, render }: SectionCardProps) {
       className="mb-4 rounded-xl overflow-hidden"
       style={{ border: "2px solid #f59e0b" }}
     >
-      <div className="px-6 py-3" style={{ backgroundColor: "#130f00" }}>
+      <div
+        className="px-6 py-3 flex items-center justify-between gap-4"
+        style={{ backgroundColor: "#130f00" }}
+      >
         <span
           className="font-mono text-sm font-bold uppercase tracking-widest"
           style={{ color: "#f59e0b" }}
         >
           ▶ {title}
         </span>
+        {onReset && (
+          <button
+            onClick={onReset}
+            className="font-mono text-xs font-bold uppercase tracking-widest rounded-lg px-3 py-1.5 shrink-0"
+            style={{
+              color: "#f87171",
+              border: "1px solid #7f1d1d",
+              backgroundColor: "transparent",
+            }}
+          >
+            ↺ Reset segment
+          </button>
+        )}
       </div>
-      <div className="p-6">{render()}</div>
+      <div className="p-6">
+        {heading && (
+          <ScreenTextInput value={heading.value} onSet={heading.onSet} />
+        )}
+        {render()}
+      </div>
     </div>
   );
 }
@@ -867,6 +947,26 @@ export default function OperatorPage() {
       );
   }
 
+  /** Replay one segment: its rounds, votes and the points it gave out are undone. */
+  async function resetSegment(segment: ResettableSegment, name: string) {
+    if (
+      !confirm(
+        `RESET ${name.toUpperCase()}: start this segment again from the beginning.
+
+Its votes are cleared, and the points it gave the panel and the audience's correct answers are taken back. Statements and names stay. Manual score changes and other segments are not touched.`,
+      )
+    )
+      return;
+    const ack = await emit(OP.RESET_SEGMENT, { segment });
+    if (!ack.ok) alert(`Reset failed: ${ack.error ?? "unknown"}`);
+    else if (segment === "segment3") setSeg3ManualWinnerId(null);
+  }
+
+  const headingFor = (key: ScreenTextKey) => ({
+    value: gameState?.screenText?.[key] ?? "",
+    onSet: (text: string) => send(OP.SET_SCREEN_TEXT, { key, text }),
+  });
+
   function applyScore(playerId: number, sign: 1 | -1) {
     if (!gameState) return;
     const val = parseInt(scoreInputs[playerId] ?? "", 10);
@@ -1204,6 +1304,23 @@ export default function OperatorPage() {
                 border: "1px solid #27272a",
                 backgroundColor: "transparent",
                 color: (gameState.showVoteBars ?? true) ? "#4ade80" : "#52525b",
+              },
+            )}
+            {panelBtn(
+              (gameState.showVotingStatus ?? true)
+                ? "● Voting Open/Closed ON"
+                : "○ Voting Open/Closed OFF",
+              () =>
+                send(OP.TOGGLE_DISPLAY, {
+                  key: "showVotingStatus",
+                  value: !(gameState.showVotingStatus ?? true),
+                }),
+              {
+                border: "1px solid #27272a",
+                backgroundColor: "transparent",
+                color: (gameState.showVotingStatus ?? true)
+                  ? "#4ade80"
+                  : "#52525b",
               },
             )}
             {panelBtn(
@@ -3551,30 +3668,39 @@ export default function OperatorPage() {
             id="WARMUP"
             title="WARMUP ROUND"
             currentPhase={currentPhase}
+            onReset={() => resetSegment("warmup", "Warmup")}
             render={renderWarmup}
           />
           <SectionCard
             id="SEGMENT1"
             title="SEGMENT 1 — TRUTH OR LIE"
             currentPhase={currentPhase}
+            onReset={() => resetSegment("segment1", "Segment 1")}
+            heading={headingFor("segment1")}
             render={renderSeg1}
           />
           <SectionCard
             id="IMPOSTER"
             title={`IMPOSTER — ${(gameState.imposter?.title ?? "").toUpperCase()}`}
             currentPhase={currentPhase}
+            onReset={() => resetSegment("imposter", "Imposter round")}
+            heading={headingFor("imposter")}
             render={renderImposter}
           />
           <SectionCard
             id="SEGMENT2"
             title="SEGMENT 2 — TWO STATEMENTS"
             currentPhase={currentPhase}
+            onReset={() => resetSegment("segment2", "Segment 2")}
+            heading={headingFor("segment2")}
             render={renderSeg2}
           />
           <SectionCard
             id="SEGMENT3"
             title="SEGMENT 3 — WHO OWNS IT?"
             currentPhase={currentPhase}
+            onReset={() => resetSegment("segment3", "Segment 3")}
+            heading={headingFor("segment3")}
             render={renderSeg3}
           />
           <SectionCard

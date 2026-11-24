@@ -47,3 +47,10 @@ Statements to type live (Ravi is the imposter, so his is the vague one):
 6. **Skip:** at the end of Segment 1 press **Skip to Segment 2**, then play the
    Imposter round later from **Jump to phase**.
 7. **Excel:** Download Excel after the round; the Imposter round has its own rows.
+
+## Segment reset
+
+Every round card has **↺ Reset segment** in its header. Play a segment, add a
+manual score change, then reset it: the segment's panel points and audience
+correct answers are taken back, the manual change stays, and phones can vote
+again when the round is replayed. Other segments are not touched.

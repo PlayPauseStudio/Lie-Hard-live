@@ -93,6 +93,8 @@ interface GameState {
   // Soft refresh / full reset start a new episode; phones signed in before it
   // sign out.
   episodeStartedAt?: number;
+  votesResetAt?: number;
+  screenText?: { segment3: string; imposter: string };
 }
 
 interface VoterDoc {
@@ -175,42 +177,6 @@ export default function AudiencePage() {
   const [regFormData, setRegFormData] = useState({ name: "", phone: "" });
   const [regError, setRegError] = useState("");
   const [registering, setRegistering] = useState(false);
-
-  // Optional creative-team form. URL lives in control/config.audienceFormUrl.
-  // When set, the registration screen requires tapping it open once before
-  // Register unlocks — a soft gate (no submission tracking). Empty/unset means
-  // no gate and the normal flow. `formOpened` is local only (not persisted), so
-  // a returning viewer who's already registered never sees it again.
-  // The registration-screen form URL stays in control/config because it's needed
-  // BEFORE the audience joins the game (no socket/gameState yet). The in-game link
-  // button lives in gameState instead (read below), so it rides the socket.
-  const [audienceFormUrl, setAudienceFormUrl] = useState("");
-  const [formOpened, setFormOpened] = useState(false);
-  useEffect(() => {
-    getDoc(doc(db, "control", "config"))
-      .then((snap) => {
-        const d = snap.exists() ? snap.data() : {};
-        setAudienceFormUrl(String(d?.audienceFormUrl ?? ""));
-      })
-      .catch(() => {
-        /* no form gate if it can't be read */
-      });
-  }, []);
-
-  // Restore the "form opened" gate after a background-tab reload (mobile), so a
-  // viewer who already opened the form isn't re-blocked from registering.
-  useEffect(() => {
-    try {
-      if (
-        audienceFormUrl &&
-        localStorage.getItem("lh_formOpened:" + audienceFormUrl)
-      ) {
-        setFormOpened(true);
-      }
-    } catch {
-      /* storage unavailable — fine */
-    }
-  }, [audienceFormUrl]);
 
   // Game / voting — authoritative state over WebSocket (audience role).
   const getToken = useCallback(
@@ -305,6 +271,18 @@ export default function AudiencePage() {
       signOut(auth).catch(() => {});
     }
   }, [episodeStartedAt, user]);
+
+  // ── Segment reset: the server dropped that segment's votes ──────────────
+  const votesResetAt = gameState?.votesResetAt ?? 0;
+  const seenVotesReset = useRef<number | null>(null);
+  useEffect(() => {
+    if (seenVotesReset.current !== null && seenVotesReset.current !== votesResetAt) {
+      setMyVote(null);
+      setShowChange(false);
+      setVoteError("");
+    }
+    seenVotesReset.current = votesResetAt;
+  }, [votesResetAt]);
 
   // ── Reset showChange on new voting round ─────────────────────────────────
 
@@ -406,10 +384,6 @@ export default function AudiencePage() {
     }
     if (!phone.trim()) {
       setRegError("Please enter your phone number.");
-      return;
-    }
-    if (audienceFormUrl && !formOpened) {
-      setRegError("Please open the form first.");
       return;
     }
     setRegistering(true);
@@ -671,43 +645,13 @@ export default function AudiencePage() {
                 className="w-full rounded-xl px-4 py-3 text-white bg-gray-900 border border-gray-700 outline-none focus:border-orange-500 transition-colors"
               />
             </div>
-            {audienceFormUrl && (
-              <div className="rounded-xl border border-orange-500/40 bg-orange-500/5 p-4 space-y-2">
-                <p className="text-gray-300 text-sm text-center">
-                  One quick step — tap to open our form, then come back and
-                  continue.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    // No window-features string: some mobile browsers block the
-                    // new tab when one is present. Persist so a background-tab
-                    // reload doesn't re-lock Register after they open the form.
-                    window.open(audienceFormUrl, "_blank");
-                    setFormOpened(true);
-                    try {
-                      localStorage.setItem(
-                        "lh_formOpened:" + audienceFormUrl,
-                        "1",
-                      );
-                    } catch {
-                      /* storage unavailable — fine */
-                    }
-                  }}
-                  className="w-full rounded-xl py-3 font-bold text-base bg-orange-500/90 text-white active:scale-95 transition-transform"
-                >
-                  {formOpened ? "✓ Opened — tap to reopen" : "Open the form ↗"}
-                </button>
-              </div>
-            )}
-
             {regError && (
               <p className="text-red-400 text-sm text-center">{regError}</p>
             )}
 
             <button
               type="submit"
-              disabled={registering || (!!audienceFormUrl && !formOpened)}
+              disabled={registering}
               className="w-full rounded-xl py-4 font-bold text-base bg-orange-500 text-white disabled:opacity-60 active:scale-95 transition-transform"
             >
               {registering ? "Saving..." : "Register & Continue →"}
@@ -1074,7 +1018,7 @@ export default function AudiencePage() {
             Segment 3
           </p>
           <p className="text-white text-xl text-center px-2 mb-8">
-            Who does this belong to?
+            {gameState.screenText?.segment3 ?? "Who does this belong to?"}
           </p>
           {showButtons ? (
             <>
@@ -1113,7 +1057,7 @@ export default function AudiencePage() {
             {imposter.title}
           </p>
           <p className="text-white text-xl text-center px-2 mb-8">
-            Who has the empty box?
+            {gameState.screenText?.imposter ?? "Who has the empty box?"}
           </p>
           {showButtons ? (
             <>

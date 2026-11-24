@@ -29,6 +29,9 @@ export const OP = {
   IMPOSTER_PICK: 'op:imposterPick',
   AWARD_IMPOSTER: 'op:awardImposter',
   SET_SEGMENT_POINTS: 'op:setSegmentPoints',
+  /** Replay one segment: its round state, votes and the points it gave out. */
+  RESET_SEGMENT: 'op:resetSegment',
+  SET_SCREEN_TEXT: 'op:setScreenText',
   SET_AUDIENCE_LINK: 'op:setAudienceLink',
   ADJUST_SCORE: 'op:adjustScore',
   TOGGLE_DISPLAY: 'op:toggleDisplay',

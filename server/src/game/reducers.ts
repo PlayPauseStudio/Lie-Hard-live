@@ -1,5 +1,5 @@
-import type { GameState, Player, Phase, WarmupStatement, Segment1Statement, Segment2Statement, ImposterContestant } from './state';
-import { initialGameState, initialImposter, SEG1_POINTS, SEG2_POINTS, SEG3_POINTS } from './state';
+import type { GameState, Player, Phase, WarmupStatement, Segment1Statement, Segment2Statement, ImposterContestant, ScreenText } from './state';
+import { initialGameState, initialImposter, initialScreenText, SEG1_POINTS, SEG2_POINTS, SEG3_POINTS } from './state';
 import { answerSwapDelta, awardVoterScores, computeSegmentAward, voterScoreSwap } from './scoring';
 
 /**
@@ -19,7 +19,8 @@ export type DisplayKey =
   | 'showVoteBars'
   | 'showLogo'
   | 'showTopVoters'
-  | 'showAudienceLink';
+  | 'showAudienceLink'
+  | 'showVotingStatus';
 
 function emptyPlayerVotes(players: Player[]): Record<number, null> {
   return Object.fromEntries(players.map((p) => [p.id, null]));
@@ -430,6 +431,83 @@ export function awardImposter(state: GameState): Patch {
   };
 }
 
+// ── Segment reset (replay a segment, or clear it after testing) ────────────────
+
+/** Which segment an audience voting round belongs to. */
+export function roundSegment(round: string): VoteSegmentKey | null {
+  if (round.startsWith('warmup-')) return 'warmup';
+  if (round.startsWith('seg1-')) return 'segment1';
+  if (round.startsWith('seg2-')) return 'segment2';
+  if (round === 'seg3') return 'segment3';
+  if (round === 'imposter') return 'imposter';
+  return null;
+}
+
+/**
+ * Put one segment back to the start, keeping its content (statements, names,
+ * photo, edited headings). The panel points and audience correct-answers it
+ * gave out are taken back, using what the segment ledger recorded; manual score
+ * changes stay. The handler clears the ledger and the export history for it.
+ */
+export function resetSegment(state: GameState, segment: VoteSegmentKey): Patch {
+  const init = initialGameState();
+  const ledger = state.segmentLedger[segment];
+  const patch: Patch = {
+    audienceVotes: Object.fromEntries(
+      Object.entries(state.audienceVotes).filter(([, v]) => roundSegment(v.votingRound) !== segment),
+    ),
+    showVoteBars: false,
+    showScorePopup: false,
+    scorePopupDeltas: [],
+    votesResetAt: Date.now(),
+  };
+  if (ledger) {
+    patch.players = addScores(
+      state.players,
+      Object.fromEntries(Object.entries(ledger.players).map(([id, n]) => [id, -n])),
+    );
+    const voterScores = { ...state.voterScores };
+    for (const [uid, n] of Object.entries(ledger.voters)) {
+      const v = voterScores[uid];
+      if (!v) continue;
+      const left = v.correctCount - n;
+      if (left > 0) voterScores[uid] = { ...v, correctCount: left };
+      else delete voterScores[uid];
+    }
+    patch.voterScores = voterScores;
+  }
+  switch (segment) {
+    case 'warmup':
+      patch.warmup = { ...init.warmup, statements: state.warmup.statements };
+      break;
+    case 'segment1':
+      patch.segment1 = { ...init.segment1, statements: state.segment1.statements, playerVotes: emptyPlayerVotes(state.players) };
+      break;
+    case 'segment2':
+      patch.segment2 = { ...init.segment2, statements: state.segment2.statements, playerVotes: emptyPlayerVotes(state.players) };
+      break;
+    case 'segment3':
+      patch.segment3 = { ...init.segment3, photoUrl: state.segment3.photoUrl, photoTitle: state.segment3.photoTitle };
+      break;
+    case 'imposter':
+      patch.imposter = {
+        ...init.imposter,
+        title: state.imposter.title,
+        contestants: state.imposter.contestants,
+        playerVotes: emptyPlayerVotes(state.players),
+      };
+      break;
+  }
+  return patch;
+}
+
+// ── Editable headings ────────────────────────────────────────────────────────
+
+export function setScreenText(state: GameState, key: keyof ScreenText, text: string): Patch {
+  // Cleared means back to the default wording.
+  return { screenText: { ...state.screenText, [key]: text.trim() || initialScreenText()[key] } };
+}
+
 // ── Manual score adjust ──────────────────────────────────────────────────────
 
 export function adjustScore(state: GameState, playerId: number, delta: number): Patch {
@@ -488,6 +566,8 @@ export function softRefresh(state: GameState): GameState {
     }),
     audienceLink: state.audienceLink,
     audienceLinkLabel: state.audienceLinkLabel,
+    showVotingStatus: state.showVotingStatus,
+    screenText: state.screenText,
     episodeStartedAt: now,
   };
 }

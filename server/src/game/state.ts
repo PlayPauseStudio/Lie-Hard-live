@@ -52,6 +52,20 @@ export interface VoterScore {
   correctCount: number;
 }
 
+/** Headings on the big screen (and phones) that the operator can reword live. */
+export interface ScreenText {
+  segment1: string;
+  segment2: string;
+  segment3: string;
+  imposter: string;
+}
+
+/** Points a segment has given out, so resetting it can take exactly those back. */
+export interface SegmentLedger {
+  players: Record<number, number>;
+  voters: Record<string, number>;
+}
+
 export interface BanterTimer {
   totalSeconds: number;
   startedAt: number | null; // epoch ms — null when not running
@@ -67,6 +81,9 @@ export interface GameState {
   showScorePopup: boolean;
   showVoteBars: boolean;
   showLogo: boolean;
+  // The big screen's "Voting open/closed" pill.
+  showVotingStatus: boolean;
+  screenText: ScreenText;
   // Operator-pushed link button on the audience phones. Lives in game state (not
   // Firestore) so it rides the same reliable channel as votes.
   showAudienceLink: boolean;
@@ -141,6 +158,10 @@ export interface GameState {
   // When this episode began (epoch ms). Soft refresh and full reset start a new
   // one; a phone that signed in before it signs out (back to the sign-in screen).
   episodeStartedAt: number;
+  // Bumped when a segment is reset, so phones forget a vote in a replayed round.
+  votesResetAt: number;
+  // Server-only (never broadcast): what each segment has scored, for resets.
+  segmentLedger: { [segment: string]: SegmentLedger };
   // Export-only history (never broadcast; see redact.fullView and history.ts).
   voteHistory: { [uid: string]: VoteHistoryEntry };
   scoreLog: ScoreLogEntry[];
@@ -154,6 +175,15 @@ export const SEG1_POINTS = 10;
 export const SEG2_POINTS = 20;
 /** Points per panelist who spots the imposter. */
 export const IMPOSTER_POINTS = 10;
+
+export function initialScreenText(): ScreenText {
+  return {
+    segment1: 'Truth or Lie?',
+    segment2: 'Which statement is the lie?',
+    segment3: 'Who does this belong to?',
+    imposter: 'Who has the empty box?',
+  };
+}
 
 export function initialImposter(): GameState['imposter'] {
   return {
@@ -185,6 +215,8 @@ export function initialGameState(): GameState {
     // Vote bars default OFF each round; the operator turns them on when wanted.
     showVoteBars: false,
     showLogo: false,
+    showVotingStatus: true,
+    screenText: initialScreenText(),
     showAudienceLink: false,
     audienceLink: '',
     audienceLinkLabel: '',
@@ -216,6 +248,8 @@ export function initialGameState(): GameState {
     audienceVotes: {},
     voterScores: {},
     episodeStartedAt: Date.now(),
+    votesResetAt: 0,
+    segmentLedger: {},
     voteHistory: {},
     scoreLog: [],
     roundLog: [],

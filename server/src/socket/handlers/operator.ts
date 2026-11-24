@@ -18,6 +18,54 @@ const empty = z.object({}).default({});
 /** Events that replace the whole show (and its score log). */
 const FRESH_START = new Set<string>([OP.START_SHOW, OP.RESET_GAME, OP.SOFT_REFRESH]);
 
+/** Which segment an event's score changes belong to (so a reset can undo them). */
+function scoredSegment(event: string, data: unknown): R.VoteSegmentKey | null {
+  switch (event) {
+    case OP.REVEAL:
+    case OP.AWARD_SEGMENT:
+      return (data as { segment: R.VoteSegmentKey }).segment;
+    case OP.AWARD_SEGMENT3:
+      return 'segment3';
+    case OP.EDIT_SEG1:
+      return 'segment1';
+    case OP.EDIT_SEG2:
+      return 'segment2';
+    case OP.IMPOSTER_SET:
+    case OP.IMPOSTER_PICK:
+    case OP.AWARD_IMPOSTER:
+      return 'imposter';
+    default:
+      return null;
+  }
+}
+
+/** Add whatever panel and audience scores moved to that segment's ledger (in place). */
+function recordLedger(before: GameState, after: GameState, segment: string): void {
+  const led = (after.segmentLedger[segment] ??= { players: {}, voters: {} });
+  if (after.players !== before.players) {
+    const prev = new Map(before.players.map((p) => [p.id, p.score]));
+    for (const p of after.players) {
+      const d = p.score - (prev.get(p.id) ?? p.score);
+      if (d) led.players[p.id] = (led.players[p.id] ?? 0) + d;
+    }
+  }
+  if (after.voterScores !== before.voterScores) {
+    const uids = new Set([...Object.keys(before.voterScores), ...Object.keys(after.voterScores)]);
+    for (const uid of uids) {
+      const d = (after.voterScores[uid]?.correctCount ?? 0) - (before.voterScores[uid]?.correctCount ?? 0);
+      if (d) led.voters[uid] = (led.voters[uid] ?? 0) + d;
+    }
+  }
+}
+
+const ROUND_LOG_NAME: Record<R.VoteSegmentKey, string> = {
+  warmup: 'Warm-up',
+  segment1: 'Segment 1',
+  segment2: 'Segment 2',
+  segment3: 'Segment 3',
+  imposter: 'Imposter',
+};
+
 export interface ServerInfo {
   /** Sockets currently connected per role. */
   online(): { operators: number; displays: number; phones: number };
@@ -67,6 +115,8 @@ export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): vo
         // (Not for a new show or a reset: those start a fresh log.)
         if (after !== before && after.players !== before.players && !FRESH_START.has(event))
           logScoreChanges(before, after, event);
+        const seg = after !== before ? scoredSegment(event, parsed.data) : null;
+        if (seg) recordLedger(before, after, seg);
         cb({ ok: true, ...(extra ?? {}) });
       } catch (e) {
         logger.error({ event, err: e instanceof Error ? e.message : e }, 'Operator handler error');
@@ -158,6 +208,20 @@ export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): vo
   on(OP.SET_SEGMENT_POINTS, S.setSegmentPointsSchema, (d) =>
     apply(R.setSegmentPoints(store.getState(), d.segment, d.points)),
   );
+
+  on(OP.RESET_SEGMENT, S.resetSegmentSchema, (d) => {
+    const s = store.getState();
+    const patch = R.resetSegment(s, d.segment);
+    delete s.segmentLedger[d.segment];
+    // The replay's votes and rounds take the old ones' place in the export.
+    for (const h of Object.values(s.voteHistory))
+      for (const round of Object.keys(h.votes)) if (R.roundSegment(round) === d.segment) delete h.votes[round];
+    for (let i = s.roundLog.length - 1; i >= 0; i--)
+      if (s.roundLog[i].segment === ROUND_LOG_NAME[d.segment]) s.roundLog.splice(i, 1);
+    apply(patch);
+  });
+
+  on(OP.SET_SCREEN_TEXT, S.setScreenTextSchema, (d) => apply(R.setScreenText(store.getState(), d.key, d.text)));
 
   on(OP.SET_AUDIENCE_LINK, S.setAudienceLinkSchema, (d) =>
     apply(R.setAudienceLink(store.getState(), d.url, d.label)),

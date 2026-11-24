@@ -46,6 +46,7 @@ const EVENT_TEXT: Record<string, string> = {
   'op:awardImposter': 'Imposter round awarded',
   'op:imposterSet': 'Imposter changed (re-scored)',
   'op:imposterPick': 'Imposter pick changed (re-scored)',
+  'op:resetSegment': 'Segment reset (its points taken back)',
 };
 
 export function recordVoteHistory(gs: GameState, uid: string, round: string, choice: string, name: string | undefined, ts: number): void {

@@ -17,6 +17,7 @@ const displayKey = z.enum([
   'showLogo',
   'showTopVoters',
   'showAudienceLink',
+  'showVotingStatus',
 ]);
 
 const shortStr = z.string().max(500);
@@ -112,6 +113,11 @@ export const imposterStatementSchema = z.object({ contestantId: z.number().int()
 export const imposterToggleSchema = z.object({ contestantId: z.number().int() });
 export const imposterSetSchema = z.object({ imposterId: z.number().int().nullable() });
 export const imposterPickSchema = z.object({ playerId: z.number().int(), contestantId: z.number().int().nullable() });
+export const resetSegmentSchema = z.object({ segment: voteSegment });
+export const setScreenTextSchema = z.object({
+  key: z.enum(['segment1', 'segment2', 'segment3', 'imposter']),
+  text: z.string().max(120),
+});
 export const setSegmentPointsSchema = z.object({
   segment: z.enum(['segment1', 'segment2', 'segment3', 'imposter']),
   points: z.number().int().min(0).max(100_000),

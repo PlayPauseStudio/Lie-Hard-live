@@ -47,6 +47,14 @@ interface GameState {
   showScorePopup: boolean;
   showVoteBars: boolean;
   showLogo?: boolean;
+  showVotingStatus?: boolean;
+  // Operator-editable headings (server fills the defaults).
+  screenText?: {
+    segment1: string;
+    segment2: string;
+    segment3: string;
+    imposter: string;
+  };
   scorePopupDeltas: { name: string; delta: number }[];
   voterScores: { [uid: string]: { name: string; correctCount: number } };
   banterTimer: {
@@ -1026,6 +1034,26 @@ function WarmupScreen({ gameState }: { gameState: GameState }) {
   );
 }
 
+/**
+ * The round's question beside the storyteller ("Truth or Lie?"). Centred in the
+ * space left of the voting pill, which floats over the top-right corner.
+ */
+function ScreenHeading({ text }: { text: string }) {
+  return (
+    <p
+      className="flex-1 min-w-0 text-center font-display font-black uppercase tracking-wide leading-tight"
+      style={{
+        color: "#f59e0b",
+        fontSize: "clamp(22px, 3.2vw, 64px)",
+        paddingRight: "14vw",
+        textShadow: "0 0 2vw rgba(245,158,11,0.3)",
+      }}
+    >
+      {text}
+    </p>
+  );
+}
+
 function Segment1Screen({ gameState }: { gameState: GameState }) {
   const { segment1, players } = gameState;
   const storyteller = players.find(
@@ -1248,6 +1276,7 @@ function Segment1Screen({ gameState }: { gameState: GameState }) {
           >
             {storyteller.name}
           </p>
+          <ScreenHeading text={gameState.screenText?.segment1 ?? "Truth or Lie?"} />
         </div>
         {segment1.statementShown ? (
           <StatementCard text={stmtObj.statement} />
@@ -1600,6 +1629,9 @@ function Segment2Screen({ gameState }: { gameState: GameState }) {
           >
             {storyteller.name}
           </p>
+          <ScreenHeading
+            text={gameState.screenText?.segment2 ?? "Which statement is the lie?"}
+          />
         </div>
         <div className="flex" style={{ gap: "1.04vw" }}>
           {stmtObj.statements.map((stmt, i) => {
@@ -1871,7 +1903,7 @@ function Segment3Screen({ gameState }: { gameState: GameState }) {
           className="font-display font-bold uppercase tracking-widest leading-none text-white"
           style={{ fontSize: "clamp(18px, 2.5vw, 48px)" }}
         >
-          Who does this belong to?
+          {gameState.screenText?.segment3 ?? "Who does this belong to?"}
         </p>
         <div
           style={{ display: "flex", flexDirection: "column", gap: "1.25vw" }}
@@ -2008,7 +2040,7 @@ function ImposterScreen({ gameState }: { gameState: GameState }) {
     (p) => revealed && im.playerVotes?.[p.id] === im.imposterId,
   );
   const nameFont =
-    n <= 4 ? "clamp(20px, 2.6vw, 52px)" : "clamp(16px, 2vw, 40px)";
+    n <= 4 ? "clamp(28px, 3.8vw, 76px)" : "clamp(22px, 2.8vw, 56px)";
   const stmtFont =
     n <= 4 ? "clamp(15px, 1.75vw, 36px)" : "clamp(13px, 1.4vw, 28px)";
 
@@ -2025,7 +2057,9 @@ function ImposterScreen({ gameState }: { gameState: GameState }) {
         className="font-display font-bold uppercase tracking-widest leading-none text-white text-center"
         style={{ fontSize: "clamp(18px, 2.5vw, 48px)" }}
       >
-        {revealed ? "The imposter was…" : "Who has the empty box?"}
+        {revealed
+          ? "The imposter was…"
+          : (gameState.screenText?.imposter ?? "Who has the empty box?")}
       </p>
 
       <div
@@ -2046,8 +2080,9 @@ function ImposterScreen({ gameState }: { gameState: GameState }) {
           return (
             <div
               key={c.id}
-              className="rounded-3xl flex flex-col transition-all duration-700"
+              className="flex flex-col transition-all duration-700"
               style={{
+                borderRadius: "clamp(28px, 3vw, 64px)",
                 border: `${isImposter ? 4 : 2}px solid ${accent}`,
                 backgroundColor: isImposter
                   ? "rgba(69,10,10,0.55)"
@@ -2056,7 +2091,7 @@ function ImposterScreen({ gameState }: { gameState: GameState }) {
                   ? "0 0 4vw rgba(248,113,113,0.45)"
                   : "none",
                 opacity: dim ? 0.35 : 1,
-                padding: "clamp(12px, 1.6vw, 32px)",
+                padding: "clamp(16px, 2vw, 40px)",
                 gap: "clamp(8px, 1vw, 20px)",
                 minHeight: "clamp(140px, 18vw, 360px)",
               }}
@@ -2071,31 +2106,20 @@ function ImposterScreen({ gameState }: { gameState: GameState }) {
                 <p
                   className="font-display font-black uppercase tracking-widest leading-none animate-fade-in"
                   style={{
-                    fontSize: "clamp(16px, 2vw, 40px)",
+                    fontSize: "clamp(24px, 3.2vw, 64px)",
                     color: "#ffffff",
                   }}
                 >
                   🕵 Imposter
                 </p>
               )}
-              {shown ? (
-                <p
-                  className="font-display leading-tight flex-1"
-                  style={{ fontSize: stmtFont, color: "#ffffff" }}
-                >
-                  {statement || "—"}
-                </p>
-              ) : (
-                <p
-                  className="font-display uppercase tracking-widest flex-1"
-                  style={{
-                    fontSize: "clamp(12px, 1.3vw, 26px)",
-                    color: "#3f3f46",
-                  }}
-                >
-                  {isImposter ? "" : "…"}
-                </p>
-              )}
+              {/* Blank (no placeholder) when statements aren't used */}
+              <p
+                className="font-display leading-tight flex-1"
+                style={{ fontSize: stmtFont, color: "#ffffff" }}
+              >
+                {shown ? statement : ""}
+              </p>
               {showVotes && (
                 <div className="flex flex-col" style={{ gap: "0.4vw" }}>
                   <span
@@ -2131,13 +2155,13 @@ function ImposterScreen({ gameState }: { gameState: GameState }) {
         <div className="flex flex-col items-center" style={{ gap: "0.8vw" }}>
           <p
             className="font-display uppercase tracking-widest"
-            style={{ color: "#71717a", fontSize: "clamp(12px, 1.2vw, 24px)" }}
+            style={{ color: "#71717a", fontSize: "clamp(14px, 1.5vw, 30px)" }}
           >
             Panel votes
           </p>
           <div
             className="flex flex-wrap justify-center"
-            style={{ gap: "1vw 2.5vw" }}
+            style={{ gap: "1.2vw 2vw" }}
           >
             {gameState.players.map((p) => {
               const pick = im.playerVotes?.[p.id] ?? null;
@@ -2153,10 +2177,11 @@ function ImposterScreen({ gameState }: { gameState: GameState }) {
               return (
                 <div
                   key={p.id}
-                  className="flex items-center rounded-2xl"
+                  className="flex items-center"
                   style={{
-                    gap: "0.8vw",
-                    padding: "0.5vw 1.2vw 0.5vw 0.5vw",
+                    gap: "1vw",
+                    borderRadius: "clamp(20px, 2.4vw, 48px)",
+                    padding: "0.8vw 2vw 0.8vw 0.8vw",
                     backgroundColor: "#0d0d0f",
                     border: `2px solid ${pickName ? color : "rgba(245,158,11,0.2)"}`,
                   }}
@@ -2166,13 +2191,13 @@ function ImposterScreen({ gameState }: { gameState: GameState }) {
                     alt={p.name}
                     className="rounded-full object-cover shrink-0"
                     style={{
-                      width: "clamp(36px, 3.6vw, 72px)",
-                      height: "clamp(36px, 3.6vw, 72px)",
+                      width: "clamp(48px, 5vw, 100px)",
+                      height: "clamp(48px, 5vw, 100px)",
                     }}
                   />
                   <span
                     className="font-display font-bold text-white"
-                    style={{ fontSize: "clamp(14px, 1.5vw, 30px)" }}
+                    style={{ fontSize: "clamp(18px, 2vw, 40px)" }}
                   >
                     {p.name}
                   </span>
@@ -2180,14 +2205,14 @@ function ImposterScreen({ gameState }: { gameState: GameState }) {
                     className="font-display"
                     style={{
                       color: "#71717a",
-                      fontSize: "clamp(14px, 1.5vw, 30px)",
+                      fontSize: "clamp(18px, 2vw, 40px)",
                     }}
                   >
                     →
                   </span>
                   <span
                     className="font-display font-black"
-                    style={{ color, fontSize: "clamp(16px, 1.8vw, 36px)" }}
+                    style={{ color, fontSize: "clamp(22px, 2.5vw, 50px)" }}
                   >
                     {pickName ?? "—"}
                   </span>
@@ -2515,6 +2540,9 @@ export default function DisplayPage() {
             <div
               className="flex items-center"
               style={{
+                // Hidden, not removed: the banter timer is positioned off this box.
+                visibility:
+                  (gameState.showVotingStatus ?? true) ? "visible" : "hidden",
                 gap: "1.1vw",
                 padding: "1.5vw 2vw",
                 backgroundColor: voteStyle.bg,
