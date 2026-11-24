@@ -1,6 +1,7 @@
 import type { GameState, Player, Phase, WarmupStatement, Segment1Statement, Segment2Statement, ImposterContestant, ScreenText } from './state';
 import { initialGameState, initialImposter, initialScreenText, SEG1_POINTS, SEG2_POINTS, SEG3_POINTS } from './state';
 import { answerSwapDelta, awardVoterScores, computeSegmentAward, voterScoreSwap } from './scoring';
+import type { PrizeKey } from './prizes';
 
 /**
  * Each reducer is a pure function of (state, payload) that returns the changed
@@ -106,7 +107,7 @@ export function reveal(state: GameState, segment: VoteSegmentKey): Patch {
     if (!stmt) return { segment1: { ...s, showResult: true } };
     const correct = stmt.isLie ? 'LIE' : 'TRUTH';
     return {
-      segment1: { ...s, showResult: true },
+      segment1: { ...s, showResult: true, audienceVotingOpen: false },
       voterScores: awardVoterScores(state, `seg1-${s.currentStorytellerId}`, correct),
     };
   }
@@ -115,7 +116,7 @@ export function reveal(state: GameState, segment: VoteSegmentKey): Patch {
     const stmt = s.statements.find((x) => x.playerId === s.currentStorytellerId);
     if (!stmt) return { segment2: { ...s, showResult: true } };
     return {
-      segment2: { ...s, showResult: true },
+      segment2: { ...s, showResult: true, audienceVotingOpen: false },
       voterScores: awardVoterScores(state, `seg2-${s.currentStorytellerId}`, `STATEMENT_${stmt.lieIndex}`),
     };
   }
@@ -499,6 +500,35 @@ export function resetSegment(state: GameState, segment: VoteSegmentKey): Patch {
       break;
   }
   return patch;
+}
+
+// ── Audience prizes ──────────────────────────────────────────────────────────
+
+/** Put one prize's podium on the big screen (null takes it off). */
+export function showPrize(state: GameState, prize: PrizeKey | null): Patch {
+  return { prizes: { ...state.prizes, shown: prize }, showTopVoters: prize != null };
+}
+
+function withSetting(state: GameState, prize: PrizeKey, change: Partial<GameState['prizes']['settings'][PrizeKey]>): Patch {
+  const p = state.prizes;
+  return { prizes: { ...p, settings: { ...p.settings, [prize]: { ...p.settings[prize], ...change } } } };
+}
+
+export function setPrizeSkipEarlier(state: GameState, prize: PrizeKey, skipEarlier: boolean): Patch {
+  return withSetting(state, prize, { skipEarlier });
+}
+
+export function setPrizeSkip(state: GameState, prize: PrizeKey, uid: string, skip: boolean): Patch {
+  const cur = state.prizes.settings[prize].skipped;
+  const skipped = skip ? (cur.includes(uid) ? cur : [...cur, uid]) : cur.filter((x) => x !== uid);
+  return withSetting(state, prize, { skipped });
+}
+
+/** Freeze the current top 3 (from the derived board) or unfreeze. */
+export function setPrizeConfirm(state: GameState, prize: PrizeKey, confirm: boolean): Patch {
+  const winners = state.prizeBoards?.[prize].winners ?? [];
+  if (confirm && winners.length === 0) return {};
+  return withSetting(state, prize, { confirmed: confirm ? winners : null });
 }
 
 // ── Editable headings ────────────────────────────────────────────────────────

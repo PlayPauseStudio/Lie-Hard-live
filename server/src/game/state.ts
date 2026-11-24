@@ -1,4 +1,6 @@
 import type { RoundLogEntry, ScoreLogEntry, VoteHistoryEntry } from './history';
+import type { PrizeBoards, PrizeState } from './prizes';
+import { initialPrizes } from './prizes';
 
 /**
  * Authoritative game state — ported from lie-hard/src/app/operator/page.tsx
@@ -162,6 +164,12 @@ export interface GameState {
   votesResetAt: number;
   // Server-only (never broadcast): what each segment has scored, for resets.
   segmentLedger: { [segment: string]: SegmentLedger };
+  // Server-only: when each voting round first opened (for "fastest").
+  roundOpenedAt: { [round: string]: number };
+  // Audience prizes: operator settings, and the boards derived from the votes
+  // (operator + big screen only).
+  prizes: PrizeState;
+  prizeBoards: PrizeBoards | null;
   // Export-only history (never broadcast; see redact.fullView and history.ts).
   voteHistory: { [uid: string]: VoteHistoryEntry };
   scoreLog: ScoreLogEntry[];
@@ -250,6 +258,9 @@ export function initialGameState(): GameState {
     episodeStartedAt: Date.now(),
     votesResetAt: 0,
     segmentLedger: {},
+    roundOpenedAt: {},
+    prizes: initialPrizes(),
+    prizeBoards: null,
     voteHistory: {},
     scoreLog: [],
     roundLog: [],

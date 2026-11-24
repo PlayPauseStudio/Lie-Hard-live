@@ -112,7 +112,7 @@ export function audienceView(gs: GameState): AudienceGameState {
 }
 
 /** Export-only history and the reset ledger, which no screen needs. */
-export type FullView = Omit<GameState, 'voteHistory' | 'scoreLog' | 'roundLog' | 'segmentLedger'>;
+export type FullView = Omit<GameState, 'voteHistory' | 'scoreLog' | 'roundLog' | 'segmentLedger' | 'roundOpenedAt'>;
 
 /**
  * Operator and display are trusted with the full state (the display needs the
@@ -120,7 +120,7 @@ export type FullView = Omit<GameState, 'voteHistory' | 'scoreLog' | 'roundLog' |
  * minus the export history and reset ledger, which only goes out in op:exportData.
  */
 export function fullView(gs: GameState): FullView {
-  const { voteHistory: _v, scoreLog: _s, roundLog: _r, segmentLedger: _l, ...rest } = gs;
+  const { voteHistory: _v, scoreLog: _s, roundLog: _r, segmentLedger: _l, roundOpenedAt: _o, ...rest } = gs;
   return rest;
 }
 

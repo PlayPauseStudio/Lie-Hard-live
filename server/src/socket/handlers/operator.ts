@@ -8,12 +8,16 @@ import { logger } from '../../util/logger';
 import { OP, type Ack } from '../../protocol/events';
 import { clearAllVoters, listVoters } from '../../persistence/voters';
 import { logImposterRound, logScoreChanges, logSegment3Round, logSegmentRound } from '../../game/history';
-import { getCurrentVotingRound } from '../../game/voting';
+import { getCurrentVotingRound, validateChoice } from '../../game/voting';
+import { computePrizeBoards } from '../../game/prizes';
 import { worstStallMs } from '../../util/loadMonitor';
 import * as R from '../../game/reducers';
 import * as S from '../../validation/schemas';
 
 const empty = z.object({}).default({});
+
+/** Read-only events: nothing changes, so the prize boards needn't be rebuilt. */
+const READ_ONLY = new Set<string>([OP.STATUS, OP.EXPORT_DATA]);
 
 /** Events that replace the whole show (and its score log). */
 const FRESH_START = new Set<string>([OP.START_SHOW, OP.RESET_GAME, OP.SOFT_REFRESH]);
@@ -90,6 +94,26 @@ export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): vo
     broadcaster.broadcastPatch(patch);
   };
 
+  /** Rebuild the audience prize boards; broadcast only if they changed. */
+  const refreshPrizeBoards = (): void => {
+    const s = store.getState();
+    const boards = computePrizeBoards(s);
+    if (JSON.stringify(boards) !== JSON.stringify(s.prizeBoards)) apply({ prizeBoards: boards });
+  };
+
+  /**
+   * Note when the open round first became votable — the start of everyone's
+   * "fastest" clock. Round 2 phones can only vote once every statement is
+   * shown, so its clock starts then.
+   */
+  const markRoundOpen = (): void => {
+    const s = store.getState();
+    const round = getCurrentVotingRound(s);
+    if (!round || s.roundOpenedAt[round]) return;
+    if (round.startsWith('seg2-') && validateChoice(s, round, 'STATEMENT_0') === 'not_all_revealed') return;
+    s.roundOpenedAt[round] = Date.now();
+  };
+
   /** Register an operator event: role guard + zod validation + ack + errors. */
   function on<T>(
     event: string,
@@ -117,6 +141,7 @@ export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): vo
           logScoreChanges(before, after, event);
         const seg = after !== before ? scoredSegment(event, parsed.data) : null;
         if (seg) recordLedger(before, after, seg);
+        if (!READ_ONLY.has(event)) refreshPrizeBoards();
         cb({ ok: true, ...(extra ?? {}) });
       } catch (e) {
         logger.error({ event, err: e instanceof Error ? e.message : e }, 'Operator handler error');
@@ -134,7 +159,10 @@ export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): vo
 
   on(OP.WARMUP_NAV, S.warmupNavSchema, (d) => apply(R.warmupNav(store.getState(), d.index)));
 
-  on(OP.OPEN_VOTE, S.voteSegmentSchema, (d) => apply(R.setVoteOpen(store.getState(), d.segment, true)));
+  on(OP.OPEN_VOTE, S.voteSegmentSchema, (d) => {
+    apply(R.setVoteOpen(store.getState(), d.segment, true));
+    markRoundOpen();
+  });
   on(OP.LOCK_VOTE, S.voteSegmentSchema, (d) => apply(R.setVoteOpen(store.getState(), d.segment, false)));
 
   on(OP.REVEAL, S.voteSegmentSchema, (d) => apply(R.reveal(store.getState(), d.segment)));
@@ -147,9 +175,10 @@ export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): vo
     apply(R.setPlayerVote(store.getState(), d.segment, d.playerId, d.vote)),
   );
 
-  on(OP.TOGGLE_STATEMENT, S.toggleStatementSchema, (d) =>
-    apply(R.toggleStatement(store.getState(), d.index)),
-  );
+  on(OP.TOGGLE_STATEMENT, S.toggleStatementSchema, (d) => {
+    apply(R.toggleStatement(store.getState(), d.index));
+    markRoundOpen();
+  });
 
   on(OP.TOGGLE_SEG1_STATEMENT, empty, () => apply(R.toggleSeg1Statement(store.getState())));
 
@@ -218,8 +247,21 @@ export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): vo
       for (const round of Object.keys(h.votes)) if (R.roundSegment(round) === d.segment) delete h.votes[round];
     for (let i = s.roundLog.length - 1; i >= 0; i--)
       if (s.roundLog[i].segment === ROUND_LOG_NAME[d.segment]) s.roundLog.splice(i, 1);
+    // A replayed round's "fastest" clock starts again.
+    for (const round of Object.keys(s.roundOpenedAt))
+      if (R.roundSegment(round) === d.segment) delete s.roundOpenedAt[round];
     apply(patch);
   });
+
+  // ── Audience prizes ────────────────────────────────────────────────────────
+  on(OP.SHOW_PRIZE, S.showPrizeSchema, (d) => apply(R.showPrize(store.getState(), d.prize)));
+  on(OP.PRIZE_SETTING, S.prizeSettingSchema, (d) =>
+    apply(R.setPrizeSkipEarlier(store.getState(), d.prize, d.skipEarlier)),
+  );
+  on(OP.PRIZE_SKIP, S.prizeSkipSchema, (d) => apply(R.setPrizeSkip(store.getState(), d.prize, d.uid, d.skip)));
+  on(OP.PRIZE_CONFIRM, S.prizeConfirmSchema, (d) =>
+    apply(R.setPrizeConfirm(store.getState(), d.prize, d.confirm)),
+  );
 
   on(OP.SET_SCREEN_TEXT, S.setScreenTextSchema, (d) => apply(R.setScreenText(store.getState(), d.key, d.text)));
 

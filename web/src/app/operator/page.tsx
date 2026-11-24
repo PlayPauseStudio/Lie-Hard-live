@@ -6,6 +6,8 @@ import { useControlAccess } from "@/contexts/ControlAccessContext";
 import { useGameState } from "@/lib/useGameState";
 import { OP } from "@/lib/realtime";
 import StatusStrip from "@/components/operator/StatusStrip";
+import AudienceWinnersPanel from "@/components/operator/AudienceWinnersPanel";
+import { PRIZE_TITLE, type PrizeBoards, type PrizeState } from "@/lib/prizes";
 import ImposterPanel, {
   ImposterNamesEditor,
   cleanContestants,
@@ -107,6 +109,8 @@ interface GameState {
     points?: number;
   };
   imposter?: ImposterState;
+  prizes?: PrizeState;
+  prizeBoards?: PrizeBoards | null;
   audienceVotes: {
     [uid: string]: {
       choice: string;
@@ -353,52 +357,6 @@ function SectionCard({
 
 // ── Vote/open button pair ──────────────────────────────────────────────────
 
-// ── Top Voters Panel ───────────────────────────────────────────────────────
-
-function TopVotersPanel({
-  voterScores,
-}: {
-  voterScores: GameState["voterScores"];
-}) {
-  const sorted = Object.entries(voterScores)
-    .sort(([, a], [, b]) => b.correctCount - a.correctCount)
-    .slice(0, 3);
-
-  if (sorted.length === 0) {
-    return (
-      <p className="font-mono text-xs px-1 pt-1" style={{ color: "#3f3f46" }}>
-        No data yet
-      </p>
-    );
-  }
-
-  const medals = ["🥇", "🥈", "🥉"];
-  return (
-    <div
-      className="rounded-lg p-3 space-y-2"
-      style={{ backgroundColor: "#0d0d0f", border: "1px solid #27272a" }}
-    >
-      {sorted.map(([uid, data], rank) => (
-        <div key={uid} className="flex items-center gap-2">
-          <span className="text-base shrink-0">{medals[rank]}</span>
-          <span
-            className="font-mono text-sm flex-1 truncate"
-            style={{ color: "#e4e4e7" }}
-          >
-            {data.name}
-          </span>
-          <span
-            className="font-mono text-sm font-bold shrink-0"
-            style={{ color: "#f59e0b" }}
-          >
-            {data.correctCount} ✓
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // ── Main Component ─────────────────────────────────────────────────────────
 
 export default function OperatorPage() {
@@ -492,6 +450,7 @@ export default function OperatorPage() {
   const audienceLinkLabel = gameState?.audienceLinkLabel ?? "";
   const audienceLinkShown = gameState?.showAudienceLink ?? false;
   const [linkInput, setLinkInput] = useState("");
+  const [winnersOpen, setWinnersOpen] = useState(false);
   const [linkLabelInput, setLinkLabelInput] = useState("");
   const linkFocused = useRef(false);
   const labelFocused = useRef(false);
@@ -1349,20 +1308,28 @@ Its votes are cleared, and the points it gave the panel and the audience's corre
               AUDIENCE
             </p>
             {panelBtn(
-              gameState.showTopVoters ? "● Top Voters ON" : "○ Top Voters OFF",
-              () =>
-                send(OP.TOGGLE_DISPLAY, {
-                  key: "showTopVoters",
-                  value: !gameState.showTopVoters,
-                }),
+              "🏆 Audience winners",
+              () => setWinnersOpen(true),
               {
-                border: "1px solid #27272a",
-                backgroundColor: "transparent",
-                color: gameState.showTopVoters ? "#4ade80" : "#52525b",
+                border: "1px solid #f59e0b",
+                backgroundColor: "rgba(245,158,11,0.08)",
+                color: "#f59e0b",
               },
+              !gameState.prizes,
             )}
-            {gameState.showTopVoters && (
-              <TopVotersPanel voterScores={gameState.voterScores ?? {}} />
+            {gameState.showTopVoters && gameState.prizes?.shown && (
+              <div className="flex items-center gap-2">
+                <p className="font-mono text-xs flex-1" style={{ color: "#4ade80" }}>
+                  ● On screen: {PRIZE_TITLE[gameState.prizes.shown]}
+                </p>
+                <button
+                  onClick={() => send(OP.SHOW_PRIZE, { prize: null })}
+                  className="font-mono text-xs rounded px-2 py-1"
+                  style={{ border: "1px solid #3f3f46", color: "#d4d4d8" }}
+                >
+                  Hide
+                </button>
+              </div>
             )}
 
             {/* Audience link button — any URL (form / video / …), shown on phones */}
@@ -3713,6 +3680,15 @@ Its votes are cleared, and the points it gave the panel and the audience's corre
 
         {/* Fixed right panel */}
         {renderRightPanel()}
+        {winnersOpen && gameState?.prizes && (
+          <AudienceWinnersPanel
+            prizes={gameState.prizes}
+            boards={gameState.prizeBoards ?? null}
+            showing={gameState.showTopVoters}
+            send={send}
+            onClose={() => setWinnersOpen(false)}
+          />
+        )}
       </div>
     </div>
   );

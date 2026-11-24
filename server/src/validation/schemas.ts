@@ -118,6 +118,11 @@ export const setScreenTextSchema = z.object({
   key: z.enum(['segment1', 'segment2', 'segment3', 'imposter']),
   text: z.string().max(120),
 });
+const prizeKey = z.enum(['round1', 'round2', 'overall']);
+export const showPrizeSchema = z.object({ prize: prizeKey.nullable() });
+export const prizeSettingSchema = z.object({ prize: prizeKey, skipEarlier: z.boolean() });
+export const prizeSkipSchema = z.object({ prize: prizeKey, uid: z.string().min(1).max(128), skip: z.boolean() });
+export const prizeConfirmSchema = z.object({ prize: prizeKey, confirm: z.boolean() });
 export const setSegmentPointsSchema = z.object({
   segment: z.enum(['segment1', 'segment2', 'segment3', 'imposter']),
   points: z.number().int().min(0).max(100_000),

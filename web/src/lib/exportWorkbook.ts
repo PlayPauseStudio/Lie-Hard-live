@@ -4,6 +4,7 @@
  * Show export: one .xlsx workbook, one sheet per kind of data.
  *
  *   Summary           when, how many, who won
+ *   Winners           the three audience prizes: podium + top 10, with phones
  *   Players           final standings and points per segment
  *   Rounds            every audience vote: statement, answer, votes per option
  *   Contestant Votes  each Segment 1/2/3 round as awarded (contestants' votes)
@@ -18,6 +19,7 @@
 
 import writeXlsxFile from "write-excel-file/browser";
 import type { Row } from "write-excel-file/browser";
+import { PRIZE_ORDER, PRIZE_TITLE, type PrizeBoards } from "./prizes";
 
 // ── Inputs ─────────────────────────────────────────────────────────────────
 
@@ -31,6 +33,7 @@ interface ShowState {
   imposter?: { title: string; contestants: { id: number; name: string }[]; imposterId: number | null };
   voterScores: { [uid: string]: { name: string; correctCount: number } };
   audienceVotes: { [uid: string]: unknown };
+  prizeBoards?: PrizeBoards | null;
 }
 
 export interface ExportData {
@@ -289,6 +292,39 @@ function audienceSheet(gs: ShowState, d: ExportData, list: Round[]): Row[] {
   return rows;
 }
 
+/** Each prize's podium and top 10 (official order), with phone numbers to contact winners. */
+function winnersSheet(gs: ShowState, d: ExportData): Row[] {
+  const who = people(gs, d);
+  const rows: Row[] = [
+    head("Prize", "Podium", "Rank", "Name", "Phone", "Correct", "Rounds", "Total time (s)", "Avg time (s)", "Note", "User ID"),
+  ];
+  for (const key of PRIZE_ORDER) {
+    const b = gs.prizeBoards?.[key];
+    if (!b) continue;
+    const podium = new Map(b.winners.map((w, i) => [w.uid, i + 1]));
+    for (const r of b.official) {
+      rows.push([
+        s(PRIZE_TITLE[key]),
+        s(podium.has(r.uid) ? `#${podium.get(r.uid)}${b.confirmed ? " (confirmed)" : ""}` : ""),
+        n(r.rank),
+        s(who.get(r.uid)?.name || r.name),
+        s(who.get(r.uid)?.phone ?? ""),
+        n(r.correct),
+        n(b.rounds),
+        n(Math.round(r.totalMs / 10) / 100),
+        n(Math.round(r.avgMs / 10) / 100),
+        s(r.status === "skipped" ? "Skipped by operator" : r.status === "won-earlier" ? `Won ${PRIZE_TITLE[r.wonIn!]}` : ""),
+        s(r.uid),
+      ]);
+    }
+    // A confirmed winner who has since dropped out of the top 10 still gets a row.
+    for (const w of b.winners)
+      if (!b.official.some((r) => r.uid === w.uid))
+        rows.push([s(PRIZE_TITLE[key]), s(`#${podium.get(w.uid)} (confirmed)`), n(null), s(who.get(w.uid)?.name || w.name), s(who.get(w.uid)?.phone ?? ""), n(w.correct), n(b.rounds), n(null), n(null), s(""), s(w.uid)]);
+  }
+  return rows;
+}
+
 function rawVotesSheet(gs: ShowState, d: ExportData, list: Round[]): Row[] {
   const byKey = new Map(list.map((r) => [r.key, r]));
   const who = people(gs, d);
@@ -328,6 +364,7 @@ export async function downloadShowWorkbook(gs: ShowState, d: ExportData): Promis
 
   await writeXlsxFile([
     { sheet: "Summary", data: summarySheet(gs, d, list), columns: widths(28, 40), stickyRowsCount: 1 },
+    { sheet: "Winners", data: winnersSheet(gs, d), columns: widths(26, 16, 7, 24, 14, 9, 8, 14, 13, 30, 30), stickyRowsCount: 1 },
     { sheet: "Players", data: playersSheet(gs, d), columns: widths(7, 24, 12, 16, 16, 16, 16, 14), stickyRowsCount: 1 },
     { sheet: "Rounds", data: roundsSheet(gs, d, list), columns: widths(26, 12, 60, 18, 8, 13, 10, 16, 16, 16, 16, 16, 16), stickyRowsCount: 1 },
     { sheet: "Contestant Votes", data: contestantSheet(gs, d), columns: widths(10, 12, 22, 60, 26, 8, ...gs.players.map(() => 20)), stickyRowsCount: 1 },

@@ -48,6 +48,24 @@ Statements to type live (Ravi is the imposter, so his is the vague one):
    Imposter round later from **Jump to phase**.
 7. **Excel:** Download Excel after the round; the Imposter round has its own rows.
 
+## Audience winners
+
+Right panel → **🏆 Audience winners**. Three prizes, each ranked by most correct
+answers, then least total time on those answers (time runs from when that
+round's voting opened to the person's final vote):
+
+- **Round 1 Audience Winners**: Segment 1
+- **Round 2 Audience Winners**: Segment 2
+- **Top Audience Winners**: Segments 1, 2 and 3
+
+Checks worth doing with 2–3 phones:
+
+1. Vote correctly on one phone fast and one slowly; the fast one ranks higher.
+2. Show each prize on the big screen; the heading changes, the podium look doesn't.
+3. Round 2 → **Skip earlier winners**: anyone on the Round 1 podium is greyed out.
+4. **Skip** a person: the next one moves up; **Undo** brings them back.
+5. **Download Excel**: the Winners sheet has each prize's podium and top 10.
+
 ## Segment reset
 
 Every round card has **↺ Reset segment** in its header. Play a segment, add a

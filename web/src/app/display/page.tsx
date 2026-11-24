@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useGameState } from "@/lib/useGameState";
+import { PRIZE_TITLE, type PrizeKey, type PrizeWinner } from "@/lib/prizes";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -48,6 +49,8 @@ interface GameState {
   showVoteBars: boolean;
   showLogo?: boolean;
   showVotingStatus?: boolean;
+  prizes?: { shown: PrizeKey | null };
+  prizeBoards?: Record<PrizeKey, { winners: PrizeWinner[] }> | null;
   // Operator-editable headings (server fills the defaults).
   screenText?: {
     segment1: string;
@@ -656,14 +659,16 @@ function LeaderboardModal({
 // ── Top Voters Overlay ─────────────────────────────────────────────────────
 
 function TopVotersOverlay({
-  voterScores,
+  title,
+  winners,
 }: {
-  voterScores: GameState["voterScores"];
+  title: string;
+  /** Top 3 in order, already ranked by the server (correct, then fastest). */
+  winners: PrizeWinner[];
 }) {
-  const sorted = Object.entries(voterScores ?? {})
-    .map(([uid, data]) => ({ uid, name: data.name, count: data.correctCount }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 3);
+  const sorted = winners
+    .slice(0, 3)
+    .map((w) => ({ uid: w.uid, name: w.name, count: w.correct }));
 
   const podium =
     sorted.length >= 3
@@ -725,6 +730,8 @@ function TopVotersOverlay({
           top: "clamp(16px, 3.3vw, 56px)",
           left: "clamp(24px, 4.6vw, 80px)",
           scale: "1.3",
+          // Grow right and down from the corner so a long heading isn't clipped.
+          transformOrigin: "top left",
         }}
       >
         <div
@@ -741,7 +748,7 @@ function TopVotersOverlay({
             className="font-display font-black uppercase leading-none"
             style={{ color: "#f59e0b", fontSize: "clamp(22px, 2.7vw, 56px)" }}
           >
-            TOP VOTERS
+            {title}
           </span>
         </div>
       </div>
@@ -2715,7 +2722,13 @@ export default function DisplayPage() {
 
       {/* Top voters overlay */}
       {showTopVoters && !showLeaderboardModal && (
-        <TopVotersOverlay voterScores={voterScores ?? {}} />
+        <TopVotersOverlay
+          title={PRIZE_TITLE[gameState.prizes?.shown ?? "overall"]}
+          winners={
+            gameState.prizeBoards?.[gameState.prizes?.shown ?? "overall"]
+              ?.winners ?? []
+          }
+        />
       )}
 
       {/* Leaderboard modal */}

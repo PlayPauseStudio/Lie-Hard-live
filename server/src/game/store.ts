@@ -1,6 +1,7 @@
 import type { GameState, AudienceVote } from './state';
 import { initialGameState, initialImposter, initialScreenText } from './state';
 import { recordVoteHistory } from './history';
+import { initialPrizes } from './prizes';
 import type { Patch } from './reducers';
 
 export interface Snapshot {
@@ -51,6 +52,7 @@ export class RoomStore {
    */
   recordVote(uid: string, vote: AudienceVote): number {
     this.state.audienceVotes[uid] = vote;
+    this.state.roundOpenedAt[vote.votingRound] ??= vote.ts;
     recordVoteHistory(this.state, uid, vote.votingRound, vote.choice, vote.displayName, vote.ts);
     return ++this._version;
   }
@@ -75,6 +77,10 @@ export class RoomStore {
       screenText: { ...initialScreenText(), ...snap.state.screenText },
       votesResetAt: snap.state.votesResetAt ?? 0,
       segmentLedger: snap.state.segmentLedger ?? {},
+      // Snapshots from before audience prizes.
+      roundOpenedAt: snap.state.roundOpenedAt ?? {},
+      prizes: snap.state.prizes ?? initialPrizes(),
+      prizeBoards: snap.state.prizeBoards ?? null,
     };
     this._version = snap.version;
   }
