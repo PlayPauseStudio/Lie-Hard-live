@@ -2126,6 +2126,78 @@ function ImposterScreen({ gameState }: { gameState: GameState }) {
         })}
       </div>
 
+      {/* Panel votes — live as the operator logs them, like Rounds 1 and 2 */}
+      {gameState.players.length > 0 && (
+        <div className="flex flex-col items-center" style={{ gap: "0.8vw" }}>
+          <p
+            className="font-display uppercase tracking-widest"
+            style={{ color: "#71717a", fontSize: "clamp(12px, 1.2vw, 24px)" }}
+          >
+            Panel votes
+          </p>
+          <div
+            className="flex flex-wrap justify-center"
+            style={{ gap: "1vw 2.5vw" }}
+          >
+            {gameState.players.map((p) => {
+              const pick = im.playerVotes?.[p.id] ?? null;
+              const pickName =
+                im.contestants.find((c) => c.id === pick)?.name ?? null;
+              const color = !pickName
+                ? "#3f3f46"
+                : !revealed
+                  ? "#f59e0b"
+                  : pick === im.imposterId
+                    ? "#4ade80"
+                    : "#f87171";
+              return (
+                <div
+                  key={p.id}
+                  className="flex items-center rounded-2xl"
+                  style={{
+                    gap: "0.8vw",
+                    padding: "0.5vw 1.2vw 0.5vw 0.5vw",
+                    backgroundColor: "#0d0d0f",
+                    border: `2px solid ${pickName ? color : "rgba(245,158,11,0.2)"}`,
+                  }}
+                >
+                  <img
+                    src={p.photo}
+                    alt={p.name}
+                    className="rounded-full object-cover shrink-0"
+                    style={{
+                      width: "clamp(36px, 3.6vw, 72px)",
+                      height: "clamp(36px, 3.6vw, 72px)",
+                    }}
+                  />
+                  <span
+                    className="font-display font-bold text-white"
+                    style={{ fontSize: "clamp(14px, 1.5vw, 30px)" }}
+                  >
+                    {p.name}
+                  </span>
+                  <span
+                    className="font-display"
+                    style={{
+                      color: "#71717a",
+                      fontSize: "clamp(14px, 1.5vw, 30px)",
+                    }}
+                  >
+                    →
+                  </span>
+                  <span
+                    className="font-display font-black"
+                    style={{ color, fontSize: "clamp(16px, 1.8vw, 36px)" }}
+                  >
+                    {pickName ?? "—"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {revealed && (
         <p
           className="font-display font-bold text-center animate-fade-in"
