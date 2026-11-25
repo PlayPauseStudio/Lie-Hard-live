@@ -729,9 +729,6 @@ function TopVotersOverlay({
         style={{
           top: "clamp(16px, 3.3vw, 56px)",
           left: "clamp(24px, 4.6vw, 80px)",
-          scale: "1.3",
-          // Grow right and down from the corner so a long heading isn't clipped.
-          transformOrigin: "top left",
         }}
       >
         <div
@@ -2110,15 +2107,18 @@ function ImposterScreen({ gameState }: { gameState: GameState }) {
                 {c.name}
               </p>
               {isImposter && (
-                <p
-                  className="font-display font-black uppercase tracking-widest leading-none animate-fade-in"
+                <span
+                  className="self-start rounded-full font-display font-black uppercase tracking-widest leading-none animate-fade-in"
                   style={{
-                    fontSize: "clamp(24px, 3.2vw, 64px)",
-                    color: "#ffffff",
+                    fontSize: "clamp(22px, 2.6vw, 52px)",
+                    color: "#1a0505",
+                    backgroundColor: "#f87171",
+                    padding: "0.6vw 1.6vw",
+                    boxShadow: "0 0 2vw rgba(248,113,113,0.5)",
                   }}
                 >
-                  🕵 Imposter
-                </p>
+                  Imposter
+                </span>
               )}
               {/* Blank (no placeholder) when statements aren't used */}
               <p
