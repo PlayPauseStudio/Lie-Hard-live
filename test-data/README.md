@@ -9,7 +9,7 @@ Player names in setup can be anything; the CSVs match on `player_id`.
 | Warm-up | `warmup.csv` | 2 and 4 are LIES |
 | Segment 1 | `segment1_3players.csv` / `segment1_4players.csv` | P2 lies (and P4 in the 4-player file) |
 | Imposter | Typed in setup (below) | Ravi has the empty box |
-| Segment 2 | `segment2_3players.csv` / `segment2_4players.csv` | P1 #2, P2 #3, P3 #1, P4 #1 are the lies |
+| Segment 2 | `segment2_3players.csv` (3 statements each) / `segment2_4players.csv` (2 statements each) | 3 players: P1 #2, P2 #3, P3 #1 are the lies. 4 players: P1 #2, P2 #1, P3 #2, P4 #1 |
 | Segment 3 | Photo + title in setup (below) | Operator picks the winner |
 
 ## Segment 3 (no CSV)
