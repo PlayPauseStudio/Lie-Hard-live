@@ -6,7 +6,7 @@ import type { Broadcaster } from '../broadcast';
 import type { AppSocket } from '../types';
 import { logger } from '../../util/logger';
 import { OP, type Ack } from '../../protocol/events';
-import { clearAllVoters, listVoters } from '../../persistence/voters';
+import { clearAllVoters, joinedCount, listVoters } from '../../persistence/voters';
 import { logImposterRound, logScoreChanges, logSegment3Round, logSegmentRound } from '../../game/history';
 import { getCurrentVotingRound, validateChoice } from '../../game/voting';
 import { computePrizeBoards } from '../../game/prizes';
@@ -338,6 +338,8 @@ export function registerOperatorHandlers(socket: AppSocket, ctx: HandlerCtx): vo
         votingRound: round,
         votesNow: round ? Object.values(s.audienceVotes).filter((v) => v.votingRound === round).length : 0,
         voters: Object.keys(s.audienceVotes).length,
+        // Signed up (name + phone) this show; null until Firestore first answers.
+        joined: joinedCount(),
         worstStallMs: worstStallMs(),
         memoryMb: Math.round(process.memoryUsage().rss / 1048576),
         snapshots: ctx.info.snapshots(),

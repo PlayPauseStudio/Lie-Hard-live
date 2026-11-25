@@ -42,6 +42,34 @@ export async function getVoter(uid: string): Promise<VoterRecord | null> {
   return memory.get(uid) ?? null;
 }
 
+/**
+ * How many people have signed up this show, for the status strip. Firestore is
+ * asked (a count query, ~1 read) at most every 5 s in the background; callers
+ * get the last known number straight away (null until the first answer).
+ */
+const joined = { count: null as number | null, at: 0, inFlight: false };
+const JOINED_REFRESH_MS = 5000;
+
+export function joinedCount(): number | null {
+  const fs = getFirestore();
+  if (!fs) return memory.size;
+  if (!joined.inFlight && Date.now() - joined.at > JOINED_REFRESH_MS) {
+    joined.inFlight = true;
+    fs.collection('voters')
+      .count()
+      .get()
+      .then((snap) => {
+        joined.count = snap.data().count;
+      })
+      .catch((e) => logger.warn({ err: e instanceof Error ? e.message : e }, 'Counting voter sign-ups failed'))
+      .finally(() => {
+        joined.at = Date.now();
+        joined.inFlight = false;
+      });
+  }
+  return joined.count;
+}
+
 /** Every voter sign-up, for the export (name and phone by uid). */
 export async function listVoters(): Promise<(VoterRecord & { uid: string })[]> {
   const fs = getFirestore();
@@ -58,6 +86,9 @@ const BATCH_SIZE = 400;
  * again after signing back in.
  */
 export async function clearAllVoters(): Promise<number> {
+  // Sign-ups are being wiped: count again from zero.
+  joined.count = 0;
+  joined.at = Date.now();
   const fs = getFirestore();
   if (!fs) {
     const n = memory.size;

@@ -10,6 +10,7 @@ interface ServerStatus {
   votingRound: string | null;
   votesNow: number;
   voters: number;
+  joined: number | null;
   worstStallMs: number;
   memoryMb: number;
   snapshots: string;
@@ -171,23 +172,31 @@ export default function StatusStrip({
       );
     chips.push(
       <Chip
-        key="phones"
+        key="joined"
         tone="plain"
-        label="Phones"
-        value={`${s.online.phones} online · ${s.voters} voted`}
-        title="Online = phones with the audience page open right now. Voted = voted at least once this show."
+        label="Joined"
+        value={s.joined == null ? "…" : `${s.joined}`}
+        title="People who signed in and registered (name + phone) this show. Cleared by soft refresh / full reset."
+      />,
+      <Chip
+        key="online"
+        tone="plain"
+        label="Online"
+        value={`${s.online.phones}`}
+        title="Phones with the audience page open right now."
+      />,
+      <Chip
+        key="votes"
+        tone="plain"
+        label="Votes this round"
+        value={s.votingRound ? `${s.votesNow}` : "—"}
+        title={
+          s.votingRound
+            ? "Audience votes in the round that's open now."
+            : "No voting round is open."
+        }
       />,
     );
-    if (s.votingRound)
-      chips.push(
-        <Chip
-          key="votes"
-          tone="plain"
-          label="Votes"
-          value={`${s.votesNow}`}
-          title="Audience votes in the round that's open now"
-        />,
-      );
 
     const load = s.worstStallMs;
     chips.push(
